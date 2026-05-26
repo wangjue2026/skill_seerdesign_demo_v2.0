@@ -1,94 +1,84 @@
 import path from 'path';
 import fs from 'fs';
-import { loadAnnotations, saveAnnotations, ensureAnnotations } from './annotation-data.js';
+import { fileURLToPath } from 'url';
 
-const vueFile = process.argv[2];
-if (!vueFile) {
-  console.error('请提供 .vue 文件路径');
+const targetFile = process.argv[2];
+if (!targetFile || !targetFile.endsWith('.html')) {
+  console.error('请提供目标 .html 文件路径');
   process.exit(1);
 }
 
+// Ensure proper path resolution in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const currentDir = path.dirname(__filename);
+
 // 读取文件内容
-let content = fs.readFileSync(vueFile, 'utf-8');
+let content = fs.readFileSync(targetFile, 'utf-8');
 
-// 确保有注释块
-ensureAnnotations(vueFile);
+// 1. 读取 JS 和 CSS 资源
+const jsPath = path.join(currentDir, 'annotation-panel.js');
+const cssPath = path.join(currentDir, 'annotation-panel.css');
 
-// 解析注释得到当前标注对象（用于后续可能的代码生成）
-const annotations = loadAnnotations(vueFile);
-
-// 1. 确保 import AnnotationPanel
-if (!content.includes('import AnnotationPanel')) {
-  // 通过 import.meta.url 获取当前脚本所在的目录
-  const currentDir = new URL('.', import.meta.url).pathname;
-  const panelPath = path.resolve(currentDir, 'annotation-panel.vue');
-  const relativePath = path.relative(path.dirname(vueFile), panelPath).replace(/\\/g, '/');
-  const importPath = relativePath.startsWith('.') ? relativePath : './' + relativePath;
-  
-  const importStatement = `import AnnotationPanel from '${importPath}';`;
-
-  // 找到 <script> 部分并在其中插入 import
-  const scriptTagMatch = content.match(/<script[^>]*>/);
-  if (scriptTagMatch) {
-    const insertPos = scriptTagMatch.index + scriptTagMatch[0].length;
-    content = content.slice(0, insertPos) + '\n' + importStatement + content.slice(insertPos);
-  } else {
-    // 没有 <script>，则在文件顶端添加一个 script 块
-    content = `<script setup>\n${importStatement}\n</script>\n` + content;
-  }
+if (!fs.existsSync(jsPath) || !fs.existsSync(cssPath)) {
+  console.error('找不到 annotation-panel.js 或 annotation-panel.css，请确保它们在 annotation-kit 目录中。');
+  process.exit(1);
 }
 
-// 2. 确保 components 注册 (仅在非 setup 脚本时需要)
-const hasScriptSetup = /<script\s+setup[^>]*>/i.test(content);
-if (!hasScriptSetup) {
-  const componentsRegExp = /components\s*:\s*{[^}]*}/m;
-  if (componentsRegExp.test(content)) {
-    // 已有 components，加入 AnnotationPanel
-    content = content.replace(componentsRegExp, (match) => {
-      if (match.includes('AnnotationPanel')) return match; // 已包含
-      return match.replace(/}/, '  AnnotationPanel,\n}');
-    });
-  } else {
-    // 在 export default 中添加 components 块
-    const exportDefaultMatch = content.match(/export\s+default\s*{[^}]*}/m);
-    if (exportDefaultMatch) {
-      const newExport = exportDefaultMatch[0].replace('{', `{\n  components: {\n    AnnotationPanel,\n  },`);
-      content = content.replace(exportDefaultMatch[0], newExport);
-    } else {
-      // 如果没有 export default，添加一个最小的
-      const scriptClose = content.indexOf('</script>');
-      if (scriptClose !== -1) {
-        const before = content.slice(0, scriptClose);
-        const after = content.slice(scriptClose);
-        const add = `\nexport default {\n  components: { AnnotationPanel }\n};\n`;
-        content = before + add + after;
-      }
-    }
-  }
+let jsCode = fs.readFileSync(jsPath, 'utf-8');
+const cssCode = fs.readFileSync(cssPath, 'utf-8');
+
+// 将 CSS 内联到 JS 的 Web Component shadowDOM 模板中
+jsCode = jsCode.replace('/* CSS will be injected here by the tool */', cssCode);
+
+// 2. 【第一步】先清理所有旧的数据块（在注入工具代码之前清理，避免误匹配）
+// 用正则精确匹配 <script id="sase-annotations" ...>...</script>，包括跨行内容
+// 注意：data block 使用 type="application/json"，不是普通 script，可以精确定位
+content = content.replace(/<script\s+id="sase-annotations"[^>]*>[\s\S]*?<\/script>/g, '');
+
+// 3. 【第二步】清理旧的工具代码块（在注释标记之间）
+const INJECT_MARKER = '<!-- SASE Annotation Kit Start -->';
+const END_MARKER = '<!-- SASE Annotation Kit End -->';
+
+if (content.includes(INJECT_MARKER) && content.includes(END_MARKER)) {
+  const startIdx = content.indexOf(INJECT_MARKER);
+  const endIdx = content.indexOf(END_MARKER) + END_MARKER.length;
+  content = content.slice(0, startIdx) + content.slice(endIdx);
 }
 
-// 3. 在 <template> 中插入 AnnotationPanel 作为覆盖层
-const rootRelativePath = '/' + path.relative(process.cwd(), path.resolve(vueFile)).replace(/\\/g, '/');
+// 4. 【第三步】注入新的工具代码（在 </body> 之前）
+const injectBlock = `
+${INJECT_MARKER}
+<script>
+${jsCode}
+</script>
+<sase-annotation-panel></sase-annotation-panel>
+${END_MARKER}
+`;
 
-if (!content.includes('<AnnotationPanel')) {
-  const templateMatch = content.match(/<template[^>]*>/);
-  if (templateMatch) {
-    const insertPos = templateMatch.index + templateMatch[0].length;
-    const panelMarkup = `\n  <AnnotationPanel :filePath="'${rootRelativePath}'" />\n`;
-    content = content.slice(0, insertPos) + panelMarkup + content.slice(insertPos);
-  } else {
-    // 没有 template，创建一个最小模板
-    const scriptClose = content.indexOf('</script>');
-    const before = content.slice(0, scriptClose);
-    const after = content.slice(scriptClose);
-    const tmpl = `<template>\n  <AnnotationPanel :filePath="'${rootRelativePath}'" />\n</template>\n`;
-    content = before + tmpl + after;
-  }
+if (content.includes('</body>')) {
+  content = content.replace('</body>', injectBlock + '\n</body>');
 } else {
-  // 兼容老版本：如果已经注入过，强制将其绝对路径替换为相对路径
-  content = content.replace(/<AnnotationPanel\s+:filePath="[^"]+"\s*\/>/g, `<AnnotationPanel :filePath="'${rootRelativePath}'" />`);
+  content += '\n' + injectBlock;
+}
+
+// 5. 【第四步】插入新的空数据块（紧接在 </body> 之前，保证在工具元素之后）
+// 重要：数据块必须在 </body> 之前，且在 <sase-annotation-panel> 之后，
+// 这样 DOMContentLoaded 触发时才能被 querySelectorAll 查询到
+const defaultData = { timestamp: 0, comments: [] };
+const dataScript = `\n<script id="sase-annotations" type="application/json">\n${JSON.stringify(defaultData, null, 2)}\n</script>\n`;
+if (content.includes('</body>')) {
+  content = content.replace('</body>', dataScript + '</body>');
+} else {
+  content += dataScript;
 }
 
 // 写回文件
-fs.writeFileSync(vueFile, content, 'utf-8');
-console.log('已成功注入 AnnotationPanel 到', vueFile);
+fs.writeFileSync(targetFile, content, 'utf-8');
+console.log('✅ 已成功注入单文件原生 Annotation Kit 到', targetFile);
+console.log('   注：该 HTML 文件现在已经包含完整的打标工具和样式，您可以直接发给任何人并在离线状态下查看！');
+console.log('');
+console.log('📋 使用说明：');
+console.log('   1. 在浏览器中打开 HTML 文件，右下角出现悬浮控制台');
+console.log('   2. 打标完成后 → 打开「🛠️ 控制台」→ 切到「💻 源码数据」→ 点击「📋 复制最新源码」');
+console.log('   3. 在编辑器中找到文件底部 <script id="sase-annotations"> 区块，将整个区块替换为刚复制的内容');
+console.log('   4. 保存文件后即可将 HTML 文件分享给任何人，标注内容将完整保留');
