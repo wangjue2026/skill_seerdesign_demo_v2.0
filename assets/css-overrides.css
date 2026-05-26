@@ -1,0 +1,1571 @@
+/* SeerDesign 视觉规范 - 全局 CSS 变量与 AntD 覆盖模板 */
+/* 使用说明：将此文件引入项目中，确保在 AntD 样式之后加载 */
+
+/* ============================================
+   CSS 编写规则（必须遵守）
+   ============================================
+
+   一、CSS 文件职责
+   1. 项目中只保留一个全局样式覆盖文件：css-overrides.css
+   2. css-overrides.css 用来放：全局设计变量、AntD 组件覆盖样式、抽屉/弹窗/表单/表格/按钮等通用规范样式、Portal/Teleport 组件的样式覆盖
+   3. 页面组件里的 scoped style 只允许写当前页面自己的布局样式（页面容器/区块/独有间距/非AntD内部结构的普通业务样式）
+   4. 不要在 scoped style 中覆盖 Drawer/Modal/Select/DatePicker/Dropdown/Popover/Tooltip 等组件的内部样式
+      原因：这些组件可能通过 Portal/Teleport 渲染到 document.body，scoped style 和 :deep() 对它们不稳定
+
+   二、全局样式必须有业务作用域
+   - 不要直接无差别覆盖所有 AntD 组件，除非是明确的全站基础规范
+   - 推荐使用业务命名空间 class 收敛作用域：
+     .sd-form .ant-form-item {}
+     .sd-drawer .ant-drawer-body {}
+     .sd-modal .ant-modal-body {}
+   - 页面使用时必须主动挂 class：sd-drawer / sd-drawer--form / sd-form / sd-form--horizontal / sd-form--drawer / sd-modal
+
+   三、抽屉 Drawer 样式规则
+   - Drawer 样式必须写在 css-overrides.css 中
+   - 使用 .sd-drawer 命名空间
+   - 结构只分三层：标题栏(48px) / 内容区(0 32px padding) / 底部按钮栏(56px)
+   - 标题栏无底部分割线，底部栏无顶部分割线
+   - 底部按钮左对齐，主按钮在左，间距 8px，按钮高度 32px 字号 14px
+   - 内容超出时只允许内容区滚动，标题栏和底部栏固定不滚动
+
+   四、表单 Form 样式规则
+   - 表单规范样式必须沉淀为通用 class：.sd-form / .sd-form--horizontal / .sd-form--drawer
+   - 不要只写页面级 class，页面特殊差异通过 CSS 变量控制
+   - 推荐变量：--sd-form-label-width / --sd-form-label-gap / --sd-form-item-gap / --sd-form-control-height / --sd-form-control-padding-x
+   - Form 宽度 100%，不允许额外 padding，不允许固定 max-width
+   - FormItem 垂直间距 8px，Label 左对齐不显示冒号
+   - Label 字号 12px 字重 400 颜色 #6F7785，与控件间距 16px 通过 column-gap 控制
+   - 输入框/选择器/日期选择器高度统一 32px
+
+   五、Label 宽度规则
+   - 水平表单 Label 宽度必须按"当前表单内最长 Label 文本"计算
+   - 必填星号不参与 Label 宽度计算，使用 absolute 定位到 Label 文字左侧
+   - 必填项和非必填项的 Label 文字左边缘必须完全对齐
+   - Label 文字左边缘必须等于抽屉内容区左边缘（距抽屉左边缘 32px）
+   - 不允许为显示星号增加 padding-left，不允许星号把 Label 文字向右挤
+   - 不同表单只调整 --sd-form-label-width 变量，不重新写 CSS
+
+   六、设计系统级 CSS 原则
+   - 本文件始终按"设计系统级 CSS"处理，不按"当前页面修 bug 的 CSS"处理
+   - 能抽象成组件规范的，写成 sd-* 通用类
+   - 能用 CSS 变量表达差异的，不写死在页面 class 里
+   - 只有确实是某个项目独有的样式，才允许业务页面自己写
+   - css-overrides.css 不允许出现具体业务页面名称（如 device-add、user-add、policy-add）
+
+   ============================================ */
+
+/* ============================================
+   0. 全局 CSS 变量定义 (Tokens)
+   ============================================ */
+:root {
+  /* ========== Font Family Stack ========== */
+  --seer-font-family: "PingFang SC", "Helvetica Neue", Arial, "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", SimSun, sans-serif;
+
+  /* ========== Font Weights ========== */
+  --seer-font-weight-regular: 400;
+  --seer-font-weight-bold: 600;
+
+  /* ========== Font Sizes & Line Heights ========== */
+  /* 行高公式：字号 + 8px */
+  --seer-font-size-xs: 12px;
+  --seer-line-height-xs: 20px;
+
+  --seer-font-size-md: 14px;
+  --seer-line-height-md: 22px;
+
+  --seer-font-size-lg: 16px;
+  --seer-line-height-lg: 24px;
+
+  --seer-font-size-xl: 20px;
+  --seer-line-height-xl: 28px;
+
+  --seer-font-size-2xl: 24px;
+  --seer-line-height-2xl: 32px;
+
+  --seer-font-size-3xl: 30px;
+  --seer-line-height-3xl: 38px;
+
+  --seer-font-size-4xl: 36px;
+  --seer-line-height-4xl: 44px;
+
+  --seer-font-size-5xl: 48px;
+  --seer-line-height-5xl: 56px;
+
+  --seer-font-size-6xl: 56px;
+  --seer-line-height-6xl: 64px;
+
+  --seer-font-size-7xl: 64px;
+  --seer-line-height-7xl: 72px;
+
+  /* ========== Base Colors ========== */
+  --color-white: #FFFFFF;
+
+  /* ========== Brand Colors ========== */
+  --color-blue-l50: #E8F4FF;
+  --color-blue-l10: #4FA1FF;
+  --color-blue: #1C6EFF;
+  --color-blue-d10: #1458CC;
+  --color-turquoise: #6DD405;
+
+  /* ========== Status Colors ========== */
+  --color-red: #F52727;
+  --color-red-d10: #CF171D;
+  --color-red-d30: #82010E;
+  --color-turquoise-d10: #12A679;
+  --color-brown: #FDAA1D;
+  --color-cyan-d10: #0BA7B5;
+
+  /* ========== Security Level Colors ========== */
+  --color-orange: #FA721B;
+
+  /* ========== Metal Colors ========== */
+  --color-gold-l10: #F5C76C;
+  --color-gold: #E7AA40;
+  --color-gold-d10: #C2862D;
+  --color-silver-l10: #CBDED4;
+  --color-silver: #A9B4C8;
+  --color-silver-d10: #7F8AA1;
+  --color-bronze-l10: #D6A181;
+  --color-bronze: #C97F58;
+  --color-bronze-d10: #A35F40;
+
+  /* ========== Graphite / Grayscale ========== */
+  --color-graphite-l50: #F7F9FC;
+  --color-graphite-l40: #EDF1F7;
+  --color-graphite-l30: #E1E5EB;
+  --color-graphite-l20: #D3D7DE;
+  --color-graphite-l10: #BEC3CC;
+  --color-graphite: #A1A7B3;
+  --color-graphite-d10: #6F7785;
+  --color-graphite-d20: #5E6573;
+  --color-graphite-d30: #454C59;
+  --color-graphite-d40: #2F3540;
+  --color-graphite-d50: #1E232B;
+
+  /* ========== Shadows ========== */
+  --seer-dropshadow-s1: 0 2px 10px 0 rgba(30, 35, 43, 0.16);
+  --seer-dropshadow-s2: 0 4px 16px 0 rgba(30, 35, 43, 0.14);
+  --seer-dropshadow-s3: 0 8px 22px 0 rgba(30, 35, 43, 0.12);
+}
+
+/* ============================================
+   1. 全局手势与圆角
+   ============================================ */
+
+/* 圆角覆盖 - 输入框也需要 2px 圆角 */
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-btn:not([disabled]),
+.ant-select:not(.ant-select-disabled),
+.ant-picker:not(.ant-picker-disabled),
+.ant-menu-item:not(.ant-menu-item-disabled),
+.ant-tabs-tab:not(.ant-tabs-tab-disabled) {
+  border-radius: 2px !important;
+  cursor: pointer;
+}
+
+/* 禁用态保持 not-allowed 光标 */
+.ant-btn[disabled],
+.ant-select-disabled,
+.ant-picker-disabled,
+.ant-menu-item-disabled,
+.ant-tabs-tab-disabled {
+  cursor: not-allowed !important;
+}
+
+/* ============================================
+   2. 表格组件：行高、字号、无圆角
+   ============================================ */
+
+/* 表格无圆角 - 全局 2px 圆角不适用于表格 */
+.ant-table,
+.ant-table-container,
+.ant-table-content,
+.ant-table-thead > tr > th:first-child,
+.ant-table-thead > tr > th:last-child,
+.ant-table-tbody > tr > td:first-child,
+.ant-table-tbody > tr > td:last-child {
+  border-radius: 0 !important;
+}
+
+/* 表头样式 */
+.ant-table-thead > tr > th {
+  height: 32px !important;
+  padding: 0 12px !important;
+  box-sizing: border-box !important;
+  line-height: 20px !important;
+  vertical-align: middle !important;
+  text-align: left !important;
+  position: relative !important;
+  background-color: var(--color-graphite-l40) !important; /* #EDF1F7 */
+  border-bottom: 1px solid var(--color-graphite-l30) !important; /* #E1E5EB */
+  white-space: nowrap !important; /* 表头文字不允许换行 */
+  /* 表头文字样式 */
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  font-family: var(--seer-font-family) !important;
+  color: var(--color-graphite-d30) !important; /* #454C59 */
+}
+
+/* 关闭 AntD 表头默认伪元素分割线，避免和自定义 ::after 双线 */
+.ant-table-thead > tr > th::before {
+  display: none !important;
+}
+
+/* 表头分割线（默认需要，仅表头允许，配合 th 的 position: relative） */
+.ant-table-thead > tr > th:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 16px;
+  width: 1px;
+  background-color: var(--color-graphite-l30); /* #E1E5EB */
+}
+
+/* 表格内容行 */
+.ant-table-tbody > tr > td {
+  height: 40px !important;
+  box-sizing: border-box !important;
+  line-height: 20px !important;
+  vertical-align: middle !important;
+  text-align: left !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important; /* 彻底移除内容区竖线 */
+  border-bottom: 1px solid var(--color-graphite-l30) !important; /* 行间线：一级分割线颜色 #E1E5EB */
+  padding: 0 12px !important; /* 单元格文字左右间距 12px */
+  /* 内容文字样式 */
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  font-family: var(--seer-font-family) !important;
+  color: var(--color-graphite-d40) !important; /* #2F3540 */
+}
+
+/* 可点击文字样式 */
+.ant-table-tbody .clickable-text {
+  color: var(--color-blue) !important; /* #1C6EFF */
+  cursor: pointer !important;
+}
+
+.ant-table-tbody .clickable-text:hover {
+  color: var(--color-blue-l10) !important; /* #4FA1FF */
+}
+
+/* 操作列文字 */
+.ant-table-tbody .action-link {
+  color: var(--color-blue) !important;
+  cursor: pointer !important;
+  margin-right: 16px !important;
+}
+
+.ant-table-tbody .action-link:last-child {
+  margin-right: 0 !important;
+}
+
+.ant-table-tbody .action-link:hover {
+  color: var(--color-blue-l10) !important;
+}
+
+/* 行 Hover 样式 */
+.ant-table-tbody > tr:hover > td {
+  background-color: var(--color-graphite-l50) !important; /* 一级背景色 #F7F9FC */
+}
+
+/* 序号列 */
+.ant-table-cell.serial-column {
+  width: 40px !important;
+  text-align: center !important;
+}
+
+/* 多选框列 */
+.ant-table-selection-column {
+  width: 40px !important;
+  text-align: center !important;
+}
+
+.ant-table-thead > tr > th.ant-table-selection-column .ant-checkbox-wrapper,
+.ant-table-tbody > tr > td.ant-table-selection-column .ant-checkbox-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 数字列右对齐 */
+.ant-table-cell.numeric-column,
+.ant-table-thead > tr > th.numeric-column {
+  text-align: right !important;
+}
+
+/* ============================================
+   3. 输入框规范
+   ============================================ */
+
+/* 输入框默认状态 - 禁止使用 line-height: 32px 实现垂直居中 */
+.ant-input {
+  height: 32px !important;
+  font-size: 12px !important;
+  line-height: 20px !important;
+  padding: 5px 12px !important;
+  box-sizing: border-box !important;
+  border-color: var(--color-graphite-l20) !important;
+  border-radius: 2px !important;
+  background-color: var(--color-white) !important;
+  color: var(--color-graphite-d40) !important;
+  font-weight: 400 !important;
+}
+
+/* 输入框焦点 */
+.ant-input:focus,
+.ant-input-focused,
+.ant-input:hover {
+  border-color: var(--color-blue) !important;
+  box-shadow: none !important;
+}
+
+/* 输入框禁用 */
+.ant-input-disabled {
+  background-color: var(--color-graphite-l30) !important;
+  border-color: var(--color-graphite-l20) !important;
+  color: var(--color-graphite) !important;
+  cursor: not-allowed !important;
+}
+
+/* 输入框错误 */
+.ant-input.ant-input-status-error {
+  border-color: var(--color-red-d10) !important;
+}
+
+/* Placeholder 样式 */
+.ant-input::placeholder {
+  color: var(--color-graphite) !important; /* #A1A7B3 */
+  font-size: 12px !important;
+}
+
+/* 带前后缀/密码框/allowClear 输入框外层容器 */
+.ant-input-affix-wrapper {
+  height: 32px !important;
+  padding: 5px 12px !important;
+  border-color: var(--color-graphite-l20) !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  background-color: var(--color-white) !important;
+}
+
+.ant-input-affix-wrapper:hover,
+.ant-input-affix-wrapper-focused {
+  border-color: var(--color-blue) !important;
+  box-shadow: none !important;
+}
+
+.ant-input-affix-wrapper-status-error {
+  border-color: var(--color-red-d10) !important;
+}
+
+/* affix-wrapper 内部 input 继承行高 */
+.ant-input-affix-wrapper .ant-input {
+  height: auto !important;
+  line-height: 20px !important;
+}
+
+/* 文本域输入框 */
+.ant-input-textarea textarea {
+  font-size: 12px !important;
+  line-height: 20px !important;
+  padding: 6px 12px !important;
+  min-height: 52px !important;
+  border-color: var(--color-graphite-l20) !important;
+  border-radius: 2px !important;
+  background-color: var(--color-white) !important;
+  color: var(--color-graphite-d40) !important;
+}
+
+.ant-input-textarea textarea:focus,
+.ant-input-textarea textarea:hover {
+  border-color: var(--color-blue) !important;
+  box-shadow: none !important;
+}
+
+/* ============================================
+   4. 基础搜索框规范
+   ============================================ */
+
+/* 基础搜索框容器 */
+.basic-search {
+  position: relative;
+  display: inline-block;
+  height: 32px;
+}
+
+/* 基础搜索框 - 右侧图标区域 32px */
+.basic-search .ant-input {
+  padding-right: 32px !important;
+}
+
+/* 基础搜索框 Placeholder */
+.basic-search .ant-input::placeholder {
+  color: var(--color-graphite) !important;
+}
+
+/* 搜索图标区域 */
+.basic-search .search-icon-wrapper {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.basic-search .search-icon {
+  color: var(--color-graphite);
+}
+
+/* 关闭图标 */
+.basic-search .clear-icon {
+  margin-right: 4px;
+  color: var(--color-graphite);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.basic-search .clear-icon:hover {
+  color: var(--color-blue);
+}
+
+/* ============================================
+   5. 选择器规范
+   ============================================ */
+
+/* 选择器圆角 - 直接在 .ant-select-selector 上设置确保生效 */
+.ant-select:not(.ant-select-customize-input) .ant-select-selector {
+  border-color: var(--color-graphite-l20) !important;
+  border-radius: 2px !important;
+  background-color: var(--color-white) !important;
+}
+
+/* 单选 Select 固定高度 */
+.ant-select-single .ant-select-selector {
+  height: 32px !important;
+}
+
+/* 单选 Select 已选值和 Placeholder 文字垂直居中对齐 */
+.ant-select-single .ant-select-selector .ant-select-selection-item,
+.ant-select-single .ant-select-selector .ant-select-selection-placeholder {
+  line-height: 30px !important;
+  font-size: 12px !important;
+}
+
+/* 单选 Select 已选文字颜色 */
+.ant-select-single .ant-select-selector .ant-select-selection-item {
+  color: var(--color-graphite-d40) !important; /* #2F3540 */
+}
+
+/* 选择器 Placeholder 颜色 */
+.ant-select-selection-placeholder {
+  color: var(--color-graphite) !important; /* #A1A7B3 */
+  font-size: 12px !important;
+}
+
+/* 多选 Select 最小高度，允许换行 */
+.ant-select-multiple .ant-select-selector {
+  min-height: 32px !important;
+  height: auto !important;
+}
+
+/* 选择器焦点 */
+.ant-select-focused:not(.ant-select-disabled).ant-select:not(.ant-select-customize-input) .ant-select-selector {
+  border-color: var(--color-blue) !important;
+  box-shadow: none !important;
+}
+
+/* 选择器禁用 */
+.ant-select-disabled .ant-select-selector {
+  background-color: var(--color-graphite-l30) !important;
+  border-color: var(--color-graphite-l20) !important;
+  color: var(--color-graphite) !important;
+  cursor: not-allowed !important;
+}
+
+/* 下拉面板阴影 */
+.ant-select-dropdown {
+  box-shadow: var(--seer-dropshadow-s2) !important;
+  border-radius: 2px !important;
+  border: none !important;
+  padding: 4px 0 !important;
+}
+
+/* 下拉选项 */
+.ant-select-item {
+  height: 32px !important;
+  line-height: 32px !important;
+  font-size: 12px !important;
+  padding: 0 12px !important;
+}
+
+/* 下拉选项选中 - 底色通栏展示，禁止勾选图标 */
+.ant-select-item-option-selected {
+  background-color: var(--color-blue-l50) !important;
+  color: var(--color-blue) !important;
+}
+
+/* 下拉选项选中项隐藏勾选图标 */
+.ant-select-item-option-state {
+  display: none !important;
+}
+
+/* 下拉选项 hover */
+.ant-select-item-option-active:not(.ant-select-item-option-selected) {
+  background-color: var(--color-graphite-l50) !important;
+}
+
+/* 多选选择器 Tags - 仅对多选 Select 应用 */
+.ant-select-multiple .ant-select-selection-item {
+  background-color: var(--color-graphite-l40) !important; /* #EDF1F7 */
+  border: none !important;
+  color: var(--color-graphite-d40) !important; /* #2F3540 */
+  border-radius: 2px !important;
+  height: 20px !important;
+  line-height: 20px !important;
+  margin: 2px !important;
+  padding: 0 8px !important;
+}
+
+.ant-select-multiple .ant-select-selection-item-remove {
+  color: var(--color-graphite-d40) !important;
+  margin-left: 8px !important;
+  font-size: 12px !important;
+  background: none !important; /* 禁止蓝色圆圈背景 */
+}
+
+.ant-select-multiple .ant-select-selection-item-remove:hover {
+  color: var(--color-blue) !important;
+}
+
+/* ============================================
+   6. 复选框规范
+   ============================================ */
+
+/* 未选中状态 - 背景色白色 */
+.ant-checkbox-inner {
+  background-color: var(--color-white) !important;
+  border-color: var(--color-graphite-l20) !important;
+}
+
+/* 已选状态 - 无边框线 */
+.ant-checkbox-checked .ant-checkbox-inner {
+  background-color: var(--color-blue) !important;
+  border-color: var(--color-blue) !important;
+}
+
+/* 半选状态 - 无边框线 */
+.ant-checkbox-indeterminate .ant-checkbox-inner {
+  background-color: var(--color-blue) !important;
+  border-color: var(--color-blue) !important;
+}
+
+.ant-checkbox-indeterminate .ant-checkbox-inner::after {
+  height: 2px !important;
+  background-color: var(--color-white) !important;
+  width: 8px !important;
+}
+
+/* 禁用状态 */
+.ant-checkbox-disabled.ant-checkbox-checked .ant-checkbox-inner::after {
+  border-color: var(--color-graphite-d10) !important;
+}
+
+.ant-checkbox-disabled .ant-checkbox-inner {
+  background-color: var(--color-graphite-l30) !important;
+  border-color: var(--color-graphite-l20) !important;
+}
+
+/* ============================================
+   7. 单选框规范 (Radio)
+   ============================================ */
+
+/* 未选状态 */
+.ant-radio-inner {
+  border-color: var(--color-graphite-l20) !important;
+  background-color: transparent !important;
+}
+
+/* 已选状态 - 蓝色圆点 */
+.ant-radio-checked .ant-radio-inner {
+  border-color: var(--color-blue) !important;
+}
+
+.ant-radio-checked .ant-radio-inner::after {
+  background-color: var(--color-blue) !important;
+  transform: scale(0.5);
+}
+
+/* 悬浮态 */
+.ant-radio-wrapper:hover .ant-radio-inner,
+.ant-radio:hover .ant-radio-inner {
+  border-color: var(--color-blue) !important;
+}
+
+/* 点击态 */
+.ant-radio-wrapper:active .ant-radio-inner,
+.ant-radio:active .ant-radio-inner {
+  border-color: var(--color-blue-d10) !important;
+}
+
+/* 未选禁用 */
+.ant-radio-disabled .ant-radio-inner {
+  border-color: var(--color-graphite-l20) !important;
+  background-color: var(--color-graphite-l30) !important;
+}
+
+/* 已选禁用 */
+.ant-radio-disabled.ant-radio-checked .ant-radio-inner {
+  border-color: var(--color-graphite-l20) !important;
+  background-color: var(--color-graphite-l30) !important;
+}
+
+.ant-radio-disabled.ant-radio-checked .ant-radio-inner::after {
+  background-color: var(--color-graphite) !important;
+}
+
+/* 禁用文字颜色 */
+.ant-radio-disabled + span {
+  color: var(--color-graphite) !important;
+}
+
+/* 单选框文字样式 */
+.ant-radio-wrapper {
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  color: var(--color-graphite-d40) !important;
+}
+
+/* ============================================
+   8. 按钮规范
+   ============================================ */
+
+/* 按钮基础 - 字重 400 */
+.ant-btn {
+  font-weight: 400 !important;
+  border-radius: 2px !important;
+}
+
+/* 主按钮 (Primary) */
+.ant-btn-primary {
+  background-color: var(--color-blue) !important;
+  border-color: var(--color-blue) !important;
+  color: var(--color-white) !important;
+}
+
+.ant-btn-primary:hover {
+  background-color: var(--color-blue-l10) !important;
+  border-color: var(--color-blue-l10) !important;
+  color: var(--color-white) !important;
+}
+
+.ant-btn-primary:active {
+  background-color: var(--color-blue-d10) !important;
+  border-color: var(--color-blue-d10) !important;
+  color: var(--color-white) !important;
+}
+
+/* 普通按钮 / 次按钮 (Default) */
+.ant-btn-default {
+  background-color: var(--color-white) !important;
+  color: var(--color-graphite-d40) !important;
+  border-color: var(--color-graphite-l20) !important;
+}
+
+.ant-btn-default:hover {
+  color: var(--color-blue) !important;
+  border-color: var(--color-blue) !important;
+  background-color: var(--color-white) !important;
+}
+
+.ant-btn-default:active {
+  color: var(--color-blue-d10) !important;
+  border-color: var(--color-blue-d10) !important;
+  background-color: var(--color-white) !important;
+}
+
+/* 双字按钮固定宽度 */
+.ant-btn.two-chars {
+  width: 56px;
+  padding: 0;
+  font-size: 12px !important;
+}
+
+
+/* 多字按钮自适应 - 排除图标按钮 */
+.ant-btn:not(.two-chars):not(.ant-btn-icon-only) {
+  padding: 0 16px;
+  font-size: 12px !important;
+}
+
+/* 禁用径向扩散阴影 */
+.ant-btn:active::after {
+  display: none !important;
+}
+
+/* 按钮焦点 */
+.ant-btn:focus {
+  box-shadow: none !important;
+}
+
+/* ============================================
+   9. 弹窗规范 (Modal) - 使用 .sd-modal 命名空间
+   ============================================ */
+
+/* --- 弹窗 Modal --- */
+
+/* 弹窗整体结构 */
+.sd-modal .ant-modal-content {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 弹窗标题栏 */
+.sd-modal .ant-modal-header {
+  height: 48px !important;
+  min-height: 48px !important;
+  padding: 0 16px !important;
+  border-bottom: none !important;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.sd-modal .ant-modal-title {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  line-height: 48px !important;
+}
+
+/* 弹窗内容区 - 左右边距 32px */
+.sd-modal .ant-modal-body {
+  flex: 1;
+  padding: 0 32px !important;
+  overflow-y: auto;
+}
+
+/* 弹窗底部按钮栏 - 按钮右对齐，排列顺序：主按钮在左，取消按钮在右 */
+.sd-modal .ant-modal-footer {
+  height: 56px !important;
+  min-height: 56px !important;
+  padding: 0 16px !important;
+  border-top: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex-direction: row-reverse !important; /* 主按钮在左，取消按钮在右，整体右对齐 */
+  gap: 8px !important;
+  flex-shrink: 0;
+}
+
+.sd-modal .ant-modal-footer .ant-btn {
+  height: 32px !important;
+  font-size: 14px !important;
+  border-radius: 2px !important;
+}
+
+/* ============================================
+   10. 抽屉规范 (Drawer) - 使用 .sd-drawer 命名空间
+   ============================================ */
+
+/* --- 抽屉 Drawer --- */
+
+/* 抽屉整体结构 */
+.sd-drawer .ant-drawer-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* 抽屉标题栏 */
+.sd-drawer .ant-drawer-header {
+  height: 48px !important;
+  min-height: 48px !important;
+  padding: 0 16px !important;
+  border-bottom: none !important;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.sd-drawer .ant-drawer-title {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  line-height: 48px !important;
+  text-align: left !important;
+}
+
+/* 抽屉内容区 - 左右边距 32px */
+.sd-drawer .ant-drawer-body {
+  flex: 1;
+  padding: 0 32px !important;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* 抽屉底部按钮栏 - 按钮左对齐，主按钮在左 */
+.sd-drawer .ant-drawer-footer {
+  height: 56px !important;
+  min-height: 56px !important;
+  padding: 0 16px !important;
+  border-top: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  flex-shrink: 0;
+}
+
+.sd-drawer .ant-drawer-footer .ant-btn {
+  height: 32px !important;
+  font-size: 14px !important;
+  border-radius: 2px !important;
+}
+
+/* 弹窗/抽屉底部按钮间间距 - gap 已控制，清除 AntD 默认 margin */
+.sd-modal .ant-modal-footer .ant-btn + .ant-btn,
+.sd-drawer .ant-drawer-footer .ant-btn + .ant-btn {
+  margin-left: 0 !important;
+}
+
+/* ============================================
+   11. 分页器规范
+   ============================================ */
+
+/* 分页器默认右对齐 */
+.ant-pagination {
+  text-align: right !important;
+  font-size: 12px !important;
+}
+
+/* 分页项尺寸统一 */
+.ant-pagination-item {
+  min-width: 32px !important;
+  height: 32px !important;
+  line-height: 30px !important;
+}
+
+/* 当前页码 - 蓝色圆形，直径 24px */
+.ant-pagination-item-active {
+  min-width: 24px !important;
+  width: 24px !important;
+  height: 24px !important;
+  line-height: 22px !important;
+  background-color: var(--color-blue) !important;
+  border-color: var(--color-blue) !important;
+  border-radius: 50% !important;
+}
+
+.ant-pagination-item-active a {
+  color: var(--color-white) !important;
+}
+
+/* 页码悬浮边框 */
+.ant-pagination-item:not(.ant-pagination-item-active):hover {
+  border-color: var(--color-blue) !important;
+}
+
+/* 页码点击边框 */
+.ant-pagination-item:not(.ant-pagination-item-active):active {
+  border-color: var(--color-blue-d10) !important;
+}
+
+/* 分页器文字颜色 */
+.ant-pagination .ant-pagination-total-text {
+  color: var(--color-graphite-d10) !important;
+}
+
+/* 分页器数字颜色 */
+.ant-pagination-item a {
+  color: var(--color-graphite-d40) !important;
+}
+
+/* 快速跳转输入框 */
+.ant-pagination-options-quick-jumper input {
+  width: 48px !important;
+  height: 32px !important;
+  border-color: var(--color-graphite-l20) !important;
+  border-radius: 2px !important;
+  font-size: 12px !important;
+  color: var(--color-graphite-d40) !important;
+}
+
+.ant-pagination-options-quick-jumper input:focus {
+  border-color: var(--color-blue) !important;
+  box-shadow: none !important;
+}
+
+/* 禁用状态 */
+.ant-pagination-disabled .ant-pagination-item,
+.ant-pagination-disabled .ant-pagination-item-link {
+  color: var(--color-graphite-l10) !important;
+  border-color: var(--color-graphite-l10) !important;
+}
+
+/* ============================================
+   12. 全局提示规范 (Message)
+   ============================================ */
+
+/* Message 基础容器 */
+.ant-message-notice-content {
+  border-radius: 2px !important;
+  background-color: var(--color-white) !important;
+  box-shadow: var(--seer-dropshadow-s3) !important;
+  border: none !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 20px !important;
+}
+
+/* Message 图标区域 */
+.ant-message-notice-content .anticon {
+  font-size: 16px !important;
+  margin-left: 16px !important;
+}
+
+/* Message 图标与文字间距 */
+.ant-message-notice-content .anticon + span,
+.ant-message-notice-content .ant-message-custom-content > span + span {
+  margin-left: 8px !important;
+}
+
+/* Message 文字右间距 */
+.ant-message-notice-content span:last-child {
+  margin-right: 12px !important;
+}
+
+/* Message 成功图标颜色 */
+.ant-message-success .anticon {
+  color: var(--color-turquoise-d10) !important;
+}
+
+/* Message 信息图标颜色 */
+.ant-message-info .anticon {
+  color: var(--color-blue) !important;
+}
+
+/* Message 警告图标颜色 */
+.ant-message-warning .anticon {
+  color: var(--color-orange) !important;
+}
+
+/* Message 错误图标颜色 */
+.ant-message-error .anticon {
+  color: var(--color-red-d10) !important;
+}
+
+/* Message 加载图标颜色 */
+.ant-message-loading .anticon {
+  color: var(--color-blue) !important;
+}
+
+/* ============================================
+   13. 警告提示规范 (Alert)
+   ============================================ */
+
+/* Alert 基础样式 - 无边框，最小高度 32px */
+.ant-alert {
+  border: none !important;
+  min-height: 32px !important;
+  border-radius: 2px !important;
+  padding: 0 8px !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+}
+
+/* Alert banner 模式圆角为 0 */
+.ant-alert-banner {
+  border-radius: 0 !important;
+}
+
+/* Alert 图标尺寸 */
+.ant-alert-icon {
+  font-size: 16px !important;
+}
+
+/* 普通提示条 - graphite-d10 图标和文字，#F7F7F8 背景 */
+.ant-alert-info {
+  background-color: #F7F7F8 !important;
+  border: none !important;
+}
+
+.ant-alert-info .ant-alert-icon {
+  color: var(--color-graphite-d10) !important; /* #6F7785 */
+}
+
+.ant-alert-info .ant-alert-message,
+.ant-alert-info .ant-alert-description {
+  color: var(--color-graphite-d10) !important; /* #6F7785 */
+}
+
+/* 告警提示条 - bronze-d10 图标和文字，#FFFAF2 背景 */
+.ant-alert-warning {
+  background-color: #FFFAF2 !important;
+  border: none !important;
+}
+
+.ant-alert-warning .ant-alert-icon {
+  color: var(--color-bronze-d10) !important; /* #A35F40 */
+}
+
+.ant-alert-warning .ant-alert-message,
+.ant-alert-warning .ant-alert-description {
+  color: var(--color-bronze-d10) !important; /* #A35F40 */
+}
+
+/* Alert 链接样式 */
+.ant-alert .ant-alert-action a,
+.ant-alert .ant-alert-message a {
+  margin-left: 16px !important;
+}
+
+/* Alert 关闭按钮右对齐 */
+.ant-alert-close-icon {
+  margin-left: auto !important;
+}
+
+/* ============================================
+   14. 日期选择器规范
+   ============================================ */
+
+/* 日期选择器焦点 */
+.ant-picker-focused,
+.ant-picker:hover {
+  border-color: var(--color-blue) !important;
+  box-shadow: none !important;
+}
+
+/* 日期选择器下拉面板阴影 */
+.ant-picker-dropdown {
+  box-shadow: var(--seer-dropshadow-s2) !important;
+  border-radius: 2px !important;
+}
+
+/* ============================================
+   15. 标签页规范 (Tabs)
+   ============================================ */
+
+/* 标签页容器底部 1px 分割线 */
+.ant-tabs-nav::before {
+  border-bottom: 1px solid var(--color-graphite-l30) !important; /* #E1E5EB */
+}
+
+/* 未选中状态 - 字重400，颜色graphite-d40 */
+.ant-tabs-tab {
+  font-weight: 400 !important;
+  color: var(--color-graphite-d40) !important; /* #2F3540 */
+  font-size: 14px !important;
+}
+
+/* 选中状态 - 字重500，颜色blue */
+.ant-tabs-tab-active .ant-tabs-tab-btn {
+  font-weight: 500 !important;
+  color: var(--color-blue) !important; /* #1C6EFF */
+}
+
+/* 下划线 - 高度2px，左上右上圆角2px，左下右下直角，覆盖在容器底部分割线上 */
+.ant-tabs-ink-bar {
+  height: 2px !important;
+  border-radius: 2px 2px 0 0 !important;
+  background: var(--color-blue) !important; /* #1C6EFF */
+}
+
+/* --- 分段式标签页 (Segment Style) --- */
+
+/* 分段标签页通用 - 圆角2px */
+.seer-segment-tabs .ant-radio-button-wrapper {
+  border-radius: 2px !important;
+  font-size: 12px !important;
+  height: 32px !important;
+  line-height: 30px !important;
+}
+
+/* 重标签样式 (Heavy) - 未选中 */
+.seer-segment-tabs-heavy .ant-radio-button-wrapper {
+  color: var(--color-graphite-d40) !important; /* #2F3540 */
+  background-color: var(--color-white) !important;
+  border-color: var(--color-graphite-l20) !important; /* #D3D7DE */
+}
+
+/* 重标签样式 - 选中 */
+.seer-segment-tabs-heavy .ant-radio-button-wrapper-checked {
+  color: var(--color-white) !important;
+  background-color: var(--color-blue) !important; /* #1C6EFF */
+  border-color: var(--color-blue) !important;
+}
+
+/* 重标签样式 - Hover */
+.seer-segment-tabs-heavy .ant-radio-button-wrapper:not(.ant-radio-button-wrapper-checked):hover {
+  color: var(--color-blue) !important; /* #1C6EFF */
+  background-color: #E8F0FF !important;
+  border-color: #B3CCFF !important;
+}
+
+/* 重标签样式 - 禁用 */
+.seer-segment-tabs-heavy .ant-radio-button-wrapper-disabled {
+  color: #C0C4CC !important;
+  background-color: #F7F8FA !important;
+  border-color: #DCDFE6 !important;
+}
+
+/* 轻量样式 (Light) - 未选中 */
+.seer-segment-tabs-light .ant-radio-button-wrapper {
+  color: var(--color-graphite-d40) !important; /* #2F3540 */
+  background-color: var(--color-white) !important;
+  border-color: var(--color-graphite-l20) !important; /* #D3D7DE */
+}
+
+/* 轻量样式 - 选中 */
+.seer-segment-tabs-light .ant-radio-button-wrapper-checked {
+  color: var(--color-blue) !important; /* #1C6EFF */
+  background-color: var(--color-white) !important;
+  border-color: var(--color-blue) !important;
+}
+
+/* 轻量样式 - Hover */
+.seer-segment-tabs-light .ant-radio-button-wrapper:not(.ant-radio-button-wrapper-checked):hover {
+  color: #458FFF !important;
+  background-color: var(--color-white) !important;
+  border-color: #458FFF !important;
+}
+
+/* 轻量样式 - 禁用 */
+.seer-segment-tabs-light .ant-radio-button-wrapper-disabled {
+  color: #C0C4CC !important;
+  background-color: #F7F8FA !important;
+  border-color: #DCDFE6 !important;
+}
+
+/* ============================================
+   16. 下拉/浮层投影
+   ============================================ */
+.ant-dropdown-menu {
+  box-shadow: var(--seer-dropshadow-s2) !important;
+  border-radius: 2px !important;
+  border: none !important;
+}
+
+/* ============================================
+   17. 复合搜索框
+   ============================================ */
+.composite-search {
+  width: min(660px, 100%);
+  min-width: 0;
+  max-width: 660px;
+}
+
+/* 搜索按钮正方形 - 32x32 */
+.composite-search .ant-input-search-button {
+  width: 32px !important;
+  height: 32px !important;
+  background: var(--color-blue) !important;
+  border-color: var(--color-blue) !important;
+  color: var(--color-white) !important;
+  padding: 0 !important;
+}
+
+/* 复合搜索框 Tags 样式 */
+.composite-search .ant-tag {
+  background-color: var(--color-graphite-l50) !important;
+  border: 1px solid var(--color-graphite-l30) !important;
+  color: var(--color-graphite-d40) !important;
+  border-radius: 2px !important;
+}
+
+.composite-search .ant-tag .anticon-close {
+  color: var(--color-graphite-d20) !important;
+}
+
+/* ============================================
+   18. 复合日期筛选器布局
+   ============================================ */
+.date-picker-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.date-picker-wrapper .ant-select {
+  min-width: 88px;
+}
+
+.date-picker-wrapper .ant-picker-range {
+  width: min(340px, 100%);
+  margin-left: 0 !important; /* 消除 px-2 */
+}
+
+/* ============================================
+   19. 表单规范 - 使用 .sd-form 命名空间
+   ============================================ */
+
+/* --- 表单通用 class 与 CSS 变量 --- */
+
+/* 通用表单变量（页面可通过 style 属性覆盖变量值） */
+.sd-form {
+  --sd-form-label-width: 64px;
+  --sd-form-label-gap: 16px;
+  --sd-form-item-gap: 8px;
+  --sd-form-control-height: 32px;
+  --sd-form-control-padding-x: 12px;
+
+  width: 100% !important;
+  padding: 0 !important;
+  max-width: none !important;
+}
+
+/* 水平表单布局 */
+.sd-form--horizontal .ant-form-item {
+  display: flex !important;
+  column-gap: var(--sd-form-label-gap) !important;
+  margin-bottom: var(--sd-form-item-gap) !important;
+}
+
+/* 抽屉内表单 */
+.sd-form--drawer {
+  --sd-form-label-width: 64px;
+}
+
+/* 表单 Label 颜色 - 辅助色 graphite-d10 */
+.sd-form .ant-form-item-label > label {
+  color: var(--color-graphite-d10) !important; /* #6F7785 */
+  font-size: 12px !important;
+  font-weight: 400 !important;
+}
+
+/* Label 宽度通过变量控制 */
+.sd-form--horizontal .ant-form-item-label {
+  width: var(--sd-form-label-width) !important;
+  flex: none !important;
+}
+
+/* Label 不显示冒号 */
+.sd-form .ant-form-item-label > label::after {
+  content: none !important;
+}
+
+/* 表单必填星号 - absolute 定位，不占用 Label 宽度 */
+.sd-form .ant-form-item-label > label.ant-form-item-required::before {
+  color: var(--color-red) !important; /* #F52727 */
+  margin-right: 4px !important; /* 星号与Label文字间距4px */
+}
+
+/* 表单错误提示 */
+.sd-form .ant-form-item-explain-error {
+  font-size: 12px !important;
+  color: var(--color-red-d10) !important; /* #CF171D */
+  margin-top: 4px !important;
+}
+
+/* 表单行间距 */
+.sd-form .ant-form-item {
+  margin-bottom: var(--sd-form-item-gap) !important;
+}
+
+/* 控件高度统一 32px */
+.sd-form .ant-input,
+.sd-form .ant-select-selector,
+.sd-form .ant-picker {
+  height: var(--sd-form-control-height) !important;
+}
+
+/* Placeholder 统一样式 */
+.sd-form .ant-input::placeholder,
+.sd-form .ant-select-selection-placeholder {
+  font-size: 12px !important;
+  color: var(--color-graphite) !important; /* #A1A7B3 */
+}
+
+/* ============================================
+   20. 全局字体设置
+   ============================================ */
+body {
+  font-family: var(--seer-font-family);
+  font-weight: var(--seer-font-weight-regular);
+  font-size: var(--seer-font-size-md);
+  line-height: var(--seer-line-height-md);
+  color: var(--color-graphite-d40);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: var(--seer-font-weight-bold);
+}
+
+/* 小尺寸组件字体对齐 */
+.ant-btn-sm,
+.ant-input-sm,
+.ant-select-sm .ant-select-selector {
+  font-size: var(--seer-font-size-xs);
+  line-height: var(--seer-line-height-xs);
+}
+
+/* ============================================
+   21. 详情概览卡片 (Detail Overview Card)
+   ============================================ */
+
+/* 卡片容器 - 浅蓝色背景 */
+.detail-overview-card {
+  width: 100%;
+  background-color: var(--color-blue-l50) !important; /* #E8F4FF */
+  border-radius: 2px !important;
+  padding: 16px !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  box-sizing: border-box !important;
+}
+
+/* 对象图标区 */
+.detail-overview-card .card-icon {
+  width: 32px !important;
+  min-width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: var(--color-blue) !important;
+  margin-right: 24px !important;
+}
+
+/* 大图标模式 */
+.detail-overview-card .card-icon-large {
+  width: 64px !important;
+  min-width: 64px !important;
+  height: 64px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: var(--color-blue) !important;
+  margin-right: 24px !important;
+}
+
+/* 核心信息区 - 自适应宽度 */
+.detail-overview-card .card-info {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+/* 对象名称 */
+.detail-overview-card .card-name {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--color-graphite-d40) !important;
+  line-height: 22px !important;
+}
+
+/* 状态标签与名称间距 */
+.detail-overview-card .card-name .ant-tag {
+  margin-left: 8px !important;
+  height: 20px !important;
+  font-size: 12px !important;
+  vertical-align: middle !important;
+}
+
+/* 关键属性行 */
+.detail-overview-card .card-attrs {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  column-gap: 16px !important;
+  row-gap: 8px !important;
+  margin-top: 4px !important;
+}
+
+/* 单个属性片段 */
+.detail-overview-card .card-attr-item {
+  display: flex !important;
+  align-items: center !important;
+  font-size: 12px !important;
+  line-height: 20px !important;
+}
+
+.detail-overview-card .card-attr-label {
+  color: var(--color-graphite) !important; /* #A1A7B3 */
+  margin-right: 16px !important;
+  white-space: nowrap !important;
+}
+
+.detail-overview-card .card-attr-value {
+  color: var(--color-graphite-d40) !important; /* #2F3540 */
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* 右侧操作区 - 固定右侧，顶部对齐 */
+.detail-overview-card .card-actions {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 12px !important;
+  margin-left: 8px !important;
+  flex-shrink: 0 !important;
+}
+
+.detail-overview-card .card-actions .ant-btn {
+  height: 32px !important;
+  font-size: 12px !important;
+}
+
+/* ============================================
+   22. 表单一级标题 (Form Section Title)
+   ============================================ */
+
+/* 表单一级标题通用样式 */
+.sd-form .form-section-title {
+  height: 32px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--color-graphite-d40) !important;
+  line-height: 32px !important;
+  margin-bottom: 8px !important;
+  background: none !important;
+  border: none !important;
+}
+
+/* 蓝色竖条标题 */
+.sd-form .form-section-title-blue::before {
+  content: '' !important;
+  display: inline-block !important;
+  width: 2px !important;
+  height: 12px !important;
+  border-radius: 0.2px !important;
+  background-color: var(--color-blue) !important;
+  margin-right: 4px !important;
+  vertical-align: middle !important;
+}
+
+/* ============================================
+   23. 前后置输入框 (Prefix/Suffix Input)
+   ============================================ */
+
+/* 组合控件整体容器 */
+.input-combined {
+  display: inline-flex !important;
+  align-items: center !important;
+  height: 32px !important;
+  border-radius: 2px !important;
+  border: 1px solid var(--color-graphite-l20) !important;
+  background-color: var(--color-white) !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+/* 前置/后置区域通用样式 */
+.input-combined .input-addon {
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+  padding: 0 12px !important;
+  font-size: 12px !important;
+  white-space: nowrap !important;
+  background-color: var(--color-graphite-l50) !important; /* #F7F9FC */
+  color: var(--color-graphite-d40) !important; /* #2F3540 */
+  border-right: 1px solid var(--color-graphite-l20) !important;
+}
+
+.input-combined .input-addon:last-child {
+  border-right: none !important;
+  border-left: 1px solid var(--color-graphite-l20) !important;
+}
+
+/* 固定展示型前后置 - 最小宽度 48px */
+.input-combined .input-addon-fixed {
+  min-width: 48px !important;
+}
+
+/* 可切换选择型前后置 - 最小宽度 64px，显示下拉icon */
+.input-combined .input-addon-selectable {
+  min-width: 64px !important;
+  cursor: pointer !important;
+}
+
+.input-combined .input-addon-selectable .addon-icon {
+  margin-left: 8px !important;
+  font-size: 12px !important;
+}
+
+/* 输入区域 - 无边框，最小宽度 80px */
+.input-combined .ant-input {
+  border: none !important;
+  min-width: 80px !important;
+  height: 30px !important;
+  padding: 0 12px !important;
+  border-radius: 0 !important;
+}
+
+.input-combined .ant-input:focus {
+  box-shadow: none !important;
+}
+
+/* focus/error/disabled 状态作用于整体控件 */
+.input-combined:focus-within {
+  border-color: var(--color-blue) !important;
+}
+
+.input-combined.has-error {
+  border-color: var(--color-red-d10) !important;
+}
+
+.input-combined.is-disabled {
+  background-color: var(--color-graphite-l30) !important;
+  border-color: var(--color-graphite-l20) !important;
+  cursor: not-allowed !important;
+}
+
+/* ============================================
+   24. 表单说明文字
+   ============================================ */
+
+/* 表单项说明文字 - 控件行下方 */
+.sd-form .ant-form-item .form-item-extra,
+.sd-form .ant-form-item-extra-text {
+  font-size: 12px !important;
+  color: var(--color-graphite) !important; /* #A1A7B3 */
+  line-height: 20px !important;
+  margin-top: 4px !important;
+}
+
+/* ============================================
+   25. 表格更多列 / 列设置列
+   ============================================ */
+
+/* 更多列固定宽度 40px */
+.ant-table-cell.table-more-column {
+  width: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  text-align: center !important;
+  padding: 0 !important;
+}
+
+/* 表头更多列 - 居中省略号图标 */
+.ant-table-thead > tr > th.table-more-column {
+  text-align: center !important;
+}
+
+/* 内容区更多列 - 空白不可点击 */
+.ant-table-tbody > tr > td.table-more-column {
+  cursor: default !important;
+}
+
+/* ============================================
+   使用建议
+   ============================================
+   1. 将此文件保存为 seer-design-overrides.css
+   2. 在项目入口文件中引入：
+      import './seer-design-overrides.css';
+   3. 确保 import 顺序在 antd.css 之后
+   4. 使用 CSS 变量确保一致性：
+      color: var(--color-blue);
+      font-size: var(--seer-font-size-md);
+   5. 阴影使用规范：
+      轻量浮层（下拉菜单）：var(--seer-dropshadow-s1)
+      中等浮层（选择器面板）：var(--seer-dropshadow-s2)
+      重浮层（全局提示）：var(--seer-dropshadow-s3)
+   ============================================ */
