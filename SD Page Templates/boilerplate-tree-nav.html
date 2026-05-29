@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tree 5.0 树型导航模版骨架</title>
+  
+  <!-- 引入 Google Fonts 字体库 (Inter 用于常规字, Outfit 用于数字/标签) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- 引入 SeerDesign 全局样式与覆盖类名 -->
+  <link rel="stylesheet" href="../assets/css-overrides.css">
+  
+  <!-- 引入 Alpine.js (轻量声明式交互，免构建) -->
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  
+  <!-- 引入 Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'PingFang SC', 'sans-serif'],
+            outfit: ['Outfit', 'sans-serif'],
+          },
+          fontSize: {
+            'xs': ['12px', '20px'],   // 字号 12px, 行高 20px (常规/表格)
+            'md': ['14px', '22px'],   // 字号 14px, 行高 22px (表单/弹窗按钮)
+            'lg': ['16px', '24px'],   // 字号 16px, 行高 24px (标题)
+            'xl': ['20px', '28px'],
+          },
+          borderRadius: {
+            'control': '2px',         // 控件圆角 2px
+            'container': '4px',       // 容器卡片圆角 4px
+            'table': '0px',           // 表格直角
+          },
+          spacing: {
+            '0.5': '2px',
+            '1': '4px',
+            '2': '8px',
+            '3': '12px',
+            '4': '16px',
+            '6': '24px',
+            '8': '32px',
+          },
+          colors: {
+            brand: {
+              DEFAULT: 'var(--color-blue)',      // 品牌蓝 #1C6EFF
+              hover: 'var(--color-blue-l10)',    // 悬浮蓝 #4FA1FF
+              active: 'var(--color-blue-d10)',   // 点击蓝 #1458CC
+              lightBg: 'var(--color-blue-l50)',  // 选中浅蓝背景 #E8F4FF
+            },
+            risk: 'var(--color-red)',            // #F52727
+            warning: 'var(--color-orange)',      // #FA721B
+            text: {
+              DEFAULT: 'var(--color-graphite-d40)', // 正文 #2F3540
+              title: 'var(--color-graphite-d30)',   // 标题 #454C59
+              mute: 'var(--color-graphite)',        // 辅助色 #A1A7B3
+            },
+            border: 'var(--color-graphite-l20)',    // 一级边框 #D3D7DE
+            bg: {
+              light: 'var(--color-graphite-l50)',   // 浅底背景 #F7F9FC
+              line: 'var(--color-graphite-l30)',    // 分割线 #E1E5EB
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    /* ========================================================
+       1. 侧边栏及树型导航菜单特定样式 (SASE / XDR / DR 风格)
+       ======================================================== */
+    .tree-sidebar {
+      background-color: #272E38;
+      font-family: var(--seer-font-family);
+    }
+    .tree-menu-group-title {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--color-graphite);
+      padding: 8px 16px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      user-select: none;
+    }
+    .tree-menu-item-l1 {
+      height: 40px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 400;
+      color: #FFFFFF;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .tree-menu-item-l1:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+    .tree-menu-item-l1.parent-active {
+      background-color: #1E232B;
+    }
+    .tree-menu-item-l1.parent-active .menu-icon {
+      color: var(--color-blue) !important;
+    }
+    .tree-menu-item-l2 {
+      height: 36px;
+      padding: 0 16px 0 40px;
+      display: flex;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 400;
+      color: #FFFFFF;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .tree-menu-item-l2:hover {
+      background-color: rgba(255, 255, 255, 0.03);
+    }
+    .tree-menu-item-l2.selected {
+      background: linear-gradient(90deg, rgba(28, 110, 255, 0.2) 0%, rgba(28, 110, 255, 0) 100%);
+      font-weight: 600;
+    }
+    .tree-menu-item-l2.selected::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background-color: var(--color-blue);
+      z-index: 10;
+    }
+    .tree-menu-item-l2.selected .menu-dot {
+      background-color: #4BFFC6 !important;
+      box-shadow: 0 0 4px rgba(75, 255, 198, 0.6);
+    }
+    .menu-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background-color: #FFFFFF;
+      margin-right: 8px;
+      transition: all 0.2s;
+    }
+    .tree-submenu {
+      background-color: #1E232B;
+      overflow: hidden;
+      transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ========================================================
+       2. 标题栏 Tabs 选中态下划线对齐样式
+       ======================================================== */
+    .page-title-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; 
+      left: 16px; 
+      right: 16px;
+      height: 2px;
+      background-color: var(--color-blue);
+      border-radius: 2px 2px 0 0;
+    }
+  </style>
+</head>
+<body class="bg-bg-light text-text font-sans overflow-hidden w-screen h-screen">
+
+  <!-- 顶层交互状态容器 -->
+  <div class="flex w-full h-full" x-data="{ sidebarFold: false, submenuOpen: true, profileOpen: false, activeTab: 'list' }">
+
+    <!-- 1. 左侧树型导航栏 -->
+    <div class="tree-sidebar flex flex-col flex-shrink-0 text-white select-none transition-all duration-300"
+         :class="sidebarFold ? 'w-[56px]' : 'w-[240px]'">
+      
+      <!-- 1.1 系统 Logo 栏 (高度 56px) -->
+      <div class="h-[56px] px-2 flex items-center border-b border-[#363f4b] flex-shrink-0 overflow-hidden">
+        <div class="w-8 h-8 rounded-control ml-2 flex items-center justify-center flex-shrink-0 font-bold text-xs tracking-wide text-white" 
+             style="background: linear-gradient(135deg, #4BFFC6, #1C6EFF);">
+          SD
+        </div>
+        <span class="ml-2 text-xs font-semibold tracking-wide truncate transition-opacity duration-300" 
+              :class="sidebarFold ? 'opacity-0 w-0' : 'opacity-100'">
+          云安全访问服务
+        </span>
+        <!-- 折叠/展开按钮 -->
+        <button class="ml-auto mr-1 w-6 h-6 rounded hover:bg-white/10 flex items-center justify-center text-text-mute hover:text-white transition-colors"
+                @click="sidebarFold = !sidebarFold">
+          <svg class="w-4 h-4 transform transition-transform" :class="sidebarFold && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- 1.2 滚动菜单项列表 -->
+      <div class="flex-1 overflow-y-auto py-3">
+        <!-- 分组标题 (折叠时隐藏) -->
+        <div class="tree-menu-group-title transition-opacity duration-200" x-show="!sidebarFold">核心功能</div>
+        
+        <!-- 一级菜单项 (带有子菜单状态) -->
+        <div class="tree-menu-item-l1" :class="submenuOpen && 'parent-active'" @click="submenuOpen = !submenuOpen">
+          <span class="w-4 h-4 mr-2 text-text-mute menu-icon flex-shrink-0">
+            <!-- AI/脑图标 -->
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+          </span>
+          <span x-show="!sidebarFold" class="truncate">GENAI 保护</span>
+          <svg x-show="!sidebarFold" class="w-3 h-3 ml-auto text-text-mute transform transition-transform duration-200" :class="submenuOpen && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+
+        <!-- 子级菜单 (折叠态下子菜单展开通过 max-height 动画) -->
+        <div class="tree-submenu" x-show="submenuOpen && !sidebarFold" x-transition.scale.origin.top>
+          <div class="tree-menu-item-l2 selected">
+            <span class="menu-dot"></span>Agent 风险识别
+          </div>
+          <div class="tree-menu-item-l2" onclick="alert('跳转至其他页面')">
+            <span class="menu-dot"></span>安全日志分析
+          </div>
+        </div>
+      </div>
+
+      <!-- 1.3 底部个人中心及退出栏 -->
+      <div class="h-11 px-4 border-t border-[#363f4b] flex items-center bg-[#212730] flex-shrink-0 relative">
+        <div class="w-5 h-5 rounded-full bg-brand flex items-center justify-center text-[10px] text-white font-semibold flex-shrink-0 cursor-pointer"
+             @click="profileOpen = !profileOpen">
+          U
+        </div>
+        <span class="ml-2 text-xs font-normal text-white/85 truncate" x-show="!sidebarFold">Admin (管理员)</span>
+        
+        <!-- 登出小气泡面板 -->
+        <div class="absolute bottom-12 left-2 bg-[#1E232B] border border-bg-line rounded-control p-2 shadow-lg w-28 text-white z-50 text-xs"
+             x-show="profileOpen" @click.outside="profileOpen = false" x-transition>
+          <div class="hover:bg-white/10 p-1.5 rounded cursor-pointer" onclick="alert('个人中心')">个人设置</div>
+          <div class="hover:bg-white/10 p-1.5 rounded cursor-pointer text-risk" onclick="alert('登出')">安全退出</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 右侧主视图区 -->
+    <div class="flex-1 flex flex-col h-screen overflow-hidden">
+      
+      <!-- 2.1 页面标题栏 (Page Title Bar) - 固高 48px, 白色, 无边框, 吸顶 -->
+      <div class="h-12 bg-white border-b border-bg-line flex items-center px-4 flex-shrink-0 relative select-none">
+        <span class="text-xs font-semibold text-text-title">Agent风险识别</span>
+        <span class="w-[1px] h-4 bg-bg-line mx-3"></span>
+        <!-- Tabs 切换区域 -->
+        <div class="flex h-full items-center">
+          <div class="page-title-tab relative h-full flex items-center px-4 text-xs cursor-pointer text-text hover:text-brand transition-colors"
+               :class="activeTab === 'list' && 'active text-brand font-semibold'"
+               @click="activeTab = 'list'">
+            Agent风险可视
+          </div>
+          <div class="page-title-tab relative h-full flex items-center px-4 text-xs cursor-pointer text-text hover:text-brand transition-colors"
+               :class="activeTab === 'analysis' && 'active text-brand font-semibold'"
+               @click="activeTab = 'analysis'">
+            AI应用分析
+          </div>
+        </div>
+      </div>
+
+      <!-- 2.2 主业务展示卡片容器 (包含外间距：上 8px, 左右 12px, 下 8px) -->
+      <div class="flex-1 overflow-hidden m-2 flex flex-col">
+        
+        <!-- B. 业务内容卡片 - 纯白, 圆角 4px (rounded-container), 无边框, 独立内边距 px-3 -->
+        <div class="bg-white rounded-container shadow-[0_1px_3px_rgba(0,0,0,0.05)] px-3 py-3 flex-1 flex flex-col overflow-hidden">
+          
+          <!-- 标签页一：Agent风险可视 -->
+          <div x-show="activeTab === 'list'" class="flex-1 flex flex-col overflow-hidden">
+            <!-- 占位提示：在此处填充筛选条件、Toolbar 按钮栏、数据 Table 及底部分页器 -->
+            <div class="flex-1 border border-dashed border-border flex flex-col items-center justify-center text-text-mute text-xs rounded-control gap-2">
+              <span>【Agent风险可视视图 主体区域】</span>
+              <span>在此处开发您的 Toolbar、表格 `.sd-table` 和 分页器 `.sd-pagination`</span>
+            </div>
+          </div>
+
+          <!-- 标签页二：AI应用分析 -->
+          <div x-show="activeTab === 'analysis'" class="flex-1 flex flex-col overflow-hidden">
+            <!-- 占位提示：在此处填充图表面板或详情内容 -->
+            <div class="flex-1 border border-dashed border-border flex flex-col items-center justify-center text-text-mute text-xs rounded-control gap-2">
+              <span>【AI应用分析视图 主体区域】</span>
+              <span>在此处开发图表、指标卡片与分析面板</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</body>
+</html>
