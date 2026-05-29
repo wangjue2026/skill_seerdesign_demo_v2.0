@@ -21,17 +21,7 @@ class SaseAnnotationPanel extends HTMLElement {
       newCommentContent: '',
       newCommentImage: '',
       toastMsg: '',
-      localTimestamp: Date.now(),
-      specRules: {
-        "GlobalInteraction": {
-          "component_name": "全局交互",
-          "must_have_cases": [
-            "所有悬停需要有明确的高亮反馈",
-            "关键操作必须有二次确认弹窗",
-            "成功或失败的轻量级 Toast 提示必不可少"
-          ]
-        }
-      }
+      localTimestamp: Date.now()
     };
     
     this.isRendered = false;
@@ -44,20 +34,127 @@ class SaseAnnotationPanel extends HTMLElement {
       document.addEventListener('DOMContentLoaded', () => {
         this.initData();
         this.render();
+        this.setupObserver();
       });
     } else {
       // DOM 已完全加载（例如动态插入场景）
       this.initData();
       this.render();
+      this.setupObserver();
     }
+  }
+
+  setupObserver() {
+    if (this.observer) return;
+    this.observer = new MutationObserver(() => {
+      if (this.state.showAnnotateMode) {
+        this.updateDots();
+        // 增加 300ms 延时检查，处理 CSS transform 过渡动画（如抽屉滑出视口）
+        setTimeout(() => {
+          if (this.state.showAnnotateMode) this.updateDots();
+        }, 300);
+      }
+    });
+    this.observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
   }
 
   storageKey() {
     return 'annotations::' + this.state.filePath;
   }
 
+  getUniqueSelector(el) {
+    if (!el || el === document.body) return 'body';
+    if (el.hasAttribute('data-sase-target')) return `[data-sase-target="${el.getAttribute('data-sase-target')}"]`;
+    if (el.id) return `#${el.id}`;
+    
+    let path = [];
+    let current = el;
+    while (current && current !== document.body) {
+      if (current.id) {
+        path.unshift(`#${current.id}`);
+        break;
+      }
+      let selector = current.tagName.toLowerCase();
+      let sib = current, nth = 1;
+      while (sib = sib.previousElementSibling) nth++;
+      selector += `:nth-child(${nth})`;
+      path.unshift(selector);
+      current = current.parentElement;
+    }
+    return 'body > ' + path.join(' > ');
+  }
+
+  findClosestContainer(el) {
+    let current = el;
+    while (current && current !== document.body) {
+      if (current.hasAttribute('data-sase-target')) return current;
+      const style = window.getComputedStyle(current);
+      if (style.position === 'fixed' || style.position === 'absolute') {
+        if (current.offsetWidth > 50 && current.offsetHeight > 50) return current;
+      }
+      if (current.hasAttribute('x-show') || current.hasAttribute('v-show') || current.hasAttribute('v-if')) {
+        return current;
+      }
+      if (typeof current.className === 'string' && /(modal|drawer|dialog|popup|page|tab-pane|content-viewport)/i.test(current.className)) {
+        return current;
+      }
+      current = current.parentElement;
+    }
+    return document.body;
+  }
+
+  getContainerName(el) {
+    const docTitle = document.title || '当前页面';
+    if (el === document.body) return docTitle;
+    if (el.hasAttribute('data-sase-target')) return el.getAttribute('data-sase-target');
+    
+    const heading = el.querySelector('h1, h2, h3, h4, h5, .title, .header');
+    if (heading && heading.innerText) {
+      let text = heading.innerText.trim().split('\n')[0];
+      if (text.length > 20) text = text.substring(0, 20) + '...';
+      if (text) return text;
+    }
+    
+    const cls = typeof el.className === 'string' ? el.className.toLowerCase() : '';
+    if (cls.includes('drawer')) return '侧边抽屉';
+    if (cls.includes('modal') || cls.includes('dialog')) return '弹窗面板';
+    if (cls.includes('page') || cls.includes('viewport')) return '局部页面';
+    if (el.hasAttribute('x-show') || el.hasAttribute('v-show') || el.hasAttribute('v-if')) return '切换面板';
+    
+    return docTitle + ' (局部区域)';
+  }
+
+  isTargetVisible(item) {
+    let selector = item.selector;
+    if (!selector) {
+      if (!item.scene || item.scene === 'global' || item.scene === 'default' || item.scene === '全局默认页面') return true;
+      selector = `[data-sase-target="${item.scene}"]`;
+    }
+    if (selector === 'body') return true;
+    
+    let el;
+    try {
+      el = document.querySelector(selector);
+    } catch(e) { return false; }
+    
+    if (!el) return false;
+    
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return false;
+    const style = window.getComputedStyle(el);
+    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+    
+    const vw = window.innerWidth || document.documentElement.clientWidth;
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    if (rect.right <= 1 || rect.left >= vw - 1 || rect.bottom <= 1 || rect.top >= vh - 1) {
+      return false;
+    }
+    
+    return true;
+  }
+
   getFilteredComments() {
-    return this.state.comments.filter(c => !c.scene || c.scene === this.state.scene);
+    return this.state.comments.filter(c => this.isTargetVisible(c));
   }
 
   initData() {
@@ -211,7 +308,22 @@ class SaseAnnotationPanel extends HTMLElement {
       </div>
     `;
     const mask = layer.querySelector('.lda-overlay-mask');
-    mask.onclick = () => {
+    mask.onclick = (e) => {
+      mask.style.pointerEvents = 'none';
+      const clickedEl = document.elementFromPoint(e.clientX, e.clientY);
+      mask.style.pointerEvents = 'auto';
+      
+      let selector = 'body';
+      let sceneName = '全局默认页面';
+      if (clickedEl) {
+        const container = this.findClosestContainer(clickedEl);
+        selector = this.getUniqueSelector(container);
+        sceneName = this.getContainerName(container);
+      }
+      this.state.tempSelector = selector;
+      this.state.tempSceneName = sceneName;
+      this.state.scene = sceneName; // for legacy UI usage
+      
       this.state.isPlacingDot = false;
       this.state.editingId = null;
       this.state.newCommentTitle = '';
@@ -239,14 +351,15 @@ class SaseAnnotationPanel extends HTMLElement {
     }
     const filtered = this.getFilteredComments();
     let html = '<div class="lda-dots-layer">';
-    filtered.forEach((item, index) => {
+    filtered.forEach((item) => {
+      const globalIndex = this.state.comments.findIndex(c => c.id === item.id) + 1;
       html += `
         <div class="lda-dot-wrapper" style="left: ${item.xPercent}%; top: ${item.yPercent}%">
           <div class="lda-dot-group">
-            <div class="lda-dot-bubble" data-id="${item.id}">${index + 1}</div>
+            <div class="lda-dot-bubble" data-id="${item.id}">${globalIndex}</div>
             <div class="lda-dot-card">
               <div class="lda-dot-card-header">
-                <span class="lda-dot-card-title"><span class="lda-dot-indicator"></span> ${index + 1}. ${item.title}</span>
+                <span class="lda-dot-card-title"><span class="lda-dot-indicator"></span> ${globalIndex}. ${item.title}</span>
                 <button class="lda-btn-delete" data-id="${item.id}">删除</button>
               </div>
               <p class="lda-dot-card-desc">${item.content}</p>
@@ -366,7 +479,7 @@ class SaseAnnotationPanel extends HTMLElement {
       } else {
         this.state.comments.forEach((item, index) => {
           contentHtml += `
-            <div class="lda-list-item ${item.scene === this.state.scene ? 'lda-list-item-current' : ''}">
+            <div class="lda-list-item ${this.isTargetVisible(item) ? 'lda-list-item-current' : ''}">
               <div class="lda-list-item-header">
                 <div style="display:flex;align-items:center;gap:8px;">
                   <span class="lda-list-index">${index + 1}</span>
@@ -388,26 +501,6 @@ class SaseAnnotationPanel extends HTMLElement {
           `;
         });
       }
-    } else if (this.state.activeTab === 'rules') {
-      contentHtml += `
-        <div class="lda-rule-alert">
-          <h4><span>📖</span> 统一业务语言参考字典</h4>
-        </div>
-      `;
-      Object.entries(this.state.specRules).forEach(([name, rule]) => {
-        contentHtml += `
-          <div class="lda-rule-card">
-            <div class="lda-rule-card-header">
-              <span class="lda-rule-name">${name}</span>
-              <span class="lda-rule-tag">${rule.component_name}</span>
-            </div>
-            <div class="lda-rule-cases">
-              <div class="lda-rule-case-title">🚨 必审 Case 项：</div>
-              <ul>${rule.must_have_cases.map(p => `<li>${p}</li>`).join('')}</ul>
-            </div>
-          </div>
-        `;
-      });
     } else if (this.state.activeTab === 'code') {
       contentHtml += `
         <div class="lda-list-header"><span>数据预览</span></div>
@@ -430,7 +523,6 @@ class SaseAnnotationPanel extends HTMLElement {
         </header>
         <nav class="lda-tabs">
           <button class="lda-tab-btn ${this.state.activeTab === 'spec' ? 'lda-tab-active' : ''}" data-tab="spec">📋 交互说明</button>
-          <button class="lda-tab-btn ${this.state.activeTab === 'rules' ? 'lda-tab-active' : ''}" data-tab="rules">📚 统一语言</button>
           <button class="lda-tab-btn ${this.state.activeTab === 'code' ? 'lda-tab-active' : ''}" data-tab="code">💻 源码数据</button>
         </nav>
         <div class="lda-panel-content">${contentHtml}</div>
@@ -502,7 +594,7 @@ class SaseAnnotationPanel extends HTMLElement {
     // Only re-render if empty to preserve input states/focus
     if (layer.innerHTML === '' || force) {
       const isEdit = this.state.editingId !== null;
-      const indexDisplay = isEdit ? (this.getFilteredComments().findIndex(c => c.id === this.state.editingId) + 1) : (this.getFilteredComments().length + 1);
+      const indexDisplay = isEdit ? (this.state.comments.findIndex(c => c.id === this.state.editingId) + 1) : (this.state.comments.length + 1);
       layer.innerHTML = `
         <div class="lda-modal-mask">
           <div class="lda-modal">
@@ -629,7 +721,8 @@ class SaseAnnotationPanel extends HTMLElement {
             image: this.state.newCommentImage,
             xPercent: this.state.tempXPercent,
             yPercent: this.state.tempYPercent,
-            scene: this.state.scene
+            scene: this.state.tempSceneName,
+            selector: this.state.tempSelector
           });
         }
         this.state.showAddModal = false;

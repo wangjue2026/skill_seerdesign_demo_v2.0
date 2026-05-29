@@ -24,41 +24,42 @@
 
 ---
 
-## 规则 2 — 用语义色而不是基色
+## 规则 2 — 用语义色 Class 而不是基色
 
 ❌ **Don't**：
-```vue
-<a-button style="background: #f52727">删除</a-button>
+```html
+<button style="background: #f52727">删除</button>
 ```
 
 ✅ **Do**：
-```vue
-<a-button danger>删除</a-button>
-<!-- 或 -->
-<a-button mode="primary" danger>删除</a-button>
+```html
+<!-- 使用规范的错误/危险状态色变量与样式 -->
+<button class="bg-error hover:bg-error-hover active:bg-error-active text-white px-3 h-8 rounded-control transition-colors">
+  删除
+</button>
 ```
 
-**为什么**：`danger` prop 派生整套色（bg/border/text/hover/active），不是单个红色。手写 `#f52727` 缺 hover/active 状态。
+**为什么**：硬编码 `#f52727` 缺少 hover、active 等交互态颜色派生。SASE 设计规范规定状态色应使用专属的语义类名或变量（如 `bg-error`），确保亮暗色主题自适应并包含完整的交互态。
 
 ---
 
 ## 规则 3 — Warning vs Risk vs Error vs Fatal
 
 ❌ **Don't**：
-- 提示"此操作将删除该用户" → 用 `alert.warning`
-- 提示"网络不稳定" → 用 `alert.error`
+- 提示"此操作将删除该用户" → 用 Warning 级别的 Alert
+- 提示"网络不稳定" → 用 Error 级别的 Alert
 
 ✅ **Do**：
 
-| 语义 | 组件状态 | 颜色基底 | 例子 |
+| 语义 | 视觉类型 | 颜色 Token 基础 | 典型例子 |
 |---|---|---|---|
-| 注意/提示 | `info` | blue.l10 | "新版本已发布，请刷新" |
-| 警告（不会出错但需注意） | `warning` | brown `#fdaa1d` | "你尚未保存草稿" |
-| 高风险（可恢复） | `risk` | orange `#fa721b` | "此操作将解绑设备，可重新绑定" |
-| 错误（不可恢复但有限） | `error` | red `#f52727` | "此操作将删除文件，可从回收站找回" |
-| 致命（毁灭性） | `fatal` | red.d30（暗红） | "此操作将清空整个集群数据库" |
+| 注意/提示 | `info` | `--sase-color-info` (蓝色) | "新版本已发布，请刷新" |
+| 警告（不会出错但需注意） | `warning` | `--sase-color-warning` (棕黄) | "你尚未保存草稿" |
+| 高风险（操作可逆但需防范） | `risk` | `--sase-color-risk` (橙色) | "此操作将解绑设备，可重新绑定" |
+| 错误（操作不可逆但范围有限） | `error` | `--sase-color-error` (红色) | "此操作将删除文件，可从回收站找回" |
+| 致命（毁灭性，灾难性后果） | `fatal` | `--sase-color-fatal` (暗红) | "此操作将清空整个集群数据库" |
 
-**为什么**：SASE 设计规范 把 risk 与 error 拆开，是为了表达"严重程度梯度"。用错会让用户对所有红色都麻木。
+**为什么**：SASE 设计规范把 `risk` 与 `error` 拆开，是为了表达"严重程度的梯度"。如果一律用红色警告，会让用户对所有红色失去敏感度。
 
 ---
 
@@ -149,76 +150,80 @@ h2 { font-size: var(--sase-font-size-xl); }       /* 20 */
 
 ---
 
-## 规则 8 — 控件 size 自定义
+## 规则 8 — 控件尺寸自定义（统一高度）
 
 ❌ **Don't**：
 ```css
-.sase-button { height: 36px; padding: 0 14px; }
+/* 自行手写高度，导致子元素 padding 和 icon 错位 */
+.app-button { height: 36px; padding: 0 14px; }
 ```
 
 ✅ **Do**：
-```vue
-<a-button size="md">默认 32</a-button>
-<a-button size="lg">大 40</a-button>
-<a-button size="xl">超大 48</a-button>
+```html
+<!-- 使用符合 SASE 规范尺寸定义的 Tailwind 类或 CSS 组件类 -->
+<!-- 中尺寸 (默认 32px) -->
+<button class="h-8 px-3 text-sm rounded-control">默认</button>
+<!-- 大尺寸 (40px) -->
+<button class="h-10 px-4 text-base rounded-control">大</button>
+<!-- 超大尺寸 (48px) -->
+<button class="h-12 px-6 text-lg rounded-control">超大</button>
 ```
 
-**为什么**：组件 `size` prop 同步调整高度、padding、字号、icon size。手改 height 会让 padding/icon 对不齐。
+**为什么**：标准组件尺寸（如 32px / 40px / 48px）同步关联了高度、内边距（padding）、字号及图标大小。手改高度会导致内部 padding/icon 无法垂直居中对齐。
 
 ---
 
-## 规则 9 — 按钮 mode 用错
+## 规则 9 — 按钮样式类型（Mode）使用不当
 
 ❌ **Don't**：
-- 一个表单 5 个 `mode="primary"` 按钮 — 视觉抢
-- 删除按钮用 `mode="primary"` `danger` — 与提交按钮颜色重
+- 一个表单放置多个高亮的 Primary (主按钮) —— 导致视觉焦点混乱。
+- 普通删除操作也使用醒目的 Primary Danger —— 与正常提交动作颜色冲突。
 
 ✅ **Do**：
-| 场景 | mode | extra |
+| 场景 | 对应视觉样式 (Tailwind / CSS 类名) | 推荐示例 |
 |---|---|---|
-| 表单主提交 | `primary` | — |
-| 取消 / 关闭 | `default` | — |
-| 删除（warning popconfirm 后） | `default` `danger` | — |
-| 主流程引导 | `primary` | block (满宽) |
-| 内联操作（表格行内） | `text` | size=sm |
-| 链接式 | `link` | — |
-| 反白浮于图上 | `default` `ghost` | — |
-| 危险大按钮 | `primary` `danger` | 仅当**唯一**操作 |
+| 表单主提交 | 主色实底 (Primary: `bg-brand text-white`) | [保存并提交] |
+| 取消 / 关闭 | 弱化次级 (Secondary/Default: `border border-border text-text`) | [取消] |
+| 普通删除 | 警示次级 (Default Danger: `border-error text-error`) | [删除配置] |
+| 内联操作（行内） | 无边框文本 (Text Link: `text-brand hover:underline`) | [编辑] [详情] |
+| 链接式 | 标准超链接样式 (Link: `text-brand underline`) | [查看相关协议] |
+| 危险大按钮 | 危险主色 (Primary Danger: `bg-error text-white`) | 仅当**唯一主操作**时使用 |
 
-**规则**：**一屏一个 primary**。其余是 default/text/link。
+**规则**：**一屏原则上只保留一个 Primary (主色实底) 按钮**。其余动作按钮均用 Default、Text 或 Link 样式弱化。
 
 ---
 
-## 规则 10 — Modal 滥用
+## 规则 10 — 模态弹窗 (Modal) 与抽屉 (Drawer) 滥用
 
 ❌ **Don't**：
-- 用 modal 显示长表单（30+ 字段）— 应该用页面或 drawer
-- 用 modal 显示纯展示信息（只有"知道了"按钮）— 应该用 notification 或 popover
-- 多层 modal 嵌套（A 打开 B 打开 C）— 难关闭
+- 用 Modal 显示包含 20+ 个字段的超长表单 —— 会导致内容拥挤且滚动不便，应使用专门配置页或 Drawer。
+- 用 Modal 显示纯通告/展示信息（如只有一个 "知道了" 按钮） —— 干扰性过强，应使用 Message 或 Notification。
+- 多层 Modal 嵌套弹出（弹窗 A 里面又弹弹窗 B） —— 增加用户认知负担，且难以定位关闭。
 
 ✅ **Do**：
-| 场景 | 用 |
+| 场景 | 推荐承载方式 |
 |---|---|
-| 简短确认（≤ 2 字段） | `a-modal` 或 `a-modalService.confirm()` |
-| 中等表单（3–10 字段） | `a-drawer` placement="end" width=480 |
-| 大表单 / 多步骤 | 跳详情页 / 半屏 drawer |
-| 危险操作确认 | `a-popconfirm`（行内）或 `Modal.warning()` |
-| 通知 / 提醒 | `a-notification` / `a-message` |
-| 简短信息查看 | `a-popover` |
+| 简短确认或极简输入（≤ 2 字段） | **Modal (对话框)**（如宽度 400px 左右的确认框） |
+| 中等复杂表单（3–10 字段） | **Drawer (侧边抽屉)**（通常置于右侧，宽度 480px / 600px） |
+| 复杂大表单 / 多步骤配置 | **跳页** (详情配置页) 或半屏大抽屉 |
+| 行内危险动作确认 | **Popconfirm (气泡确认框)**（指向性强，不干扰全局） |
+| 系统通知 / 状态性轻量提醒 | **Message (全局提示)** 或 **Notification (通知提醒框)** |
+| 轻量级气泡悬浮说明 | **Popover (气泡卡片)** 或 **Tooltip (文字提示)** |
 
 ---
 
-## 规则 11 — Tooltip / Popover 文本过长
+## 规则 11 — 文字提示 (Tooltip) 承载信息过载
 
 ❌ **Don't**：
-```vue
-<a-tooltip title="此操作会触发以下三个步骤：1. 删除原数据 2. 重建索引 3. 通知所有订阅者，整个过程可能需要几分钟">
+```html
+<!-- 将几百字的详细流程或说明塞进文字提示中 -->
+<div data-tooltip="此操作会触发以下三个步骤：1. 删除原数据 2. 重建索引 3. 通知所有订阅者，整个过程可能需要几分钟...">
 ```
 
 ✅ **Do**：
-- Tooltip ≤ 1 行（≤ 30 字），不带 markdown
-- 信息超过 1 行 → 用 `<a-popover>`（可放标题 + 内容 + 链接）
-- 复杂帮助 → 跳文档或用 `<a-drawer>`
+- **Tooltip (文字提示)**：仅适用于单行文字（通常 ≤ 30 字），且不包含复杂的 Markdown 或 HTML 格式。
+- **Popover (气泡卡片)**：如果信息超过一行，包含格式、标题或操作按钮，应使用 Popover。
+- **Drawer / 独立文档**：如果属于庞大的规则说明或操作指南，应提供帮助文档链接或在右侧 Drawer 中展示。
 
 ---
 
@@ -323,19 +328,21 @@ motionEaseOutQuint:  cubic-bezier(0.22, 1, 0.36, 1)
 
 ---
 
-## 规则 17 — 用 inline style 覆盖组件样式
+## 规则 17 — 用 inline style 覆盖基础类名样式
 
 ❌ **Don't**：
-```vue
-<a-button style="background: #1c6eff; color: white; height: 40px;">提交</a-button>
+```html
+<!-- 使用 inline style 强行写死属性，导致样式覆写困难且主题失效 -->
+<button style="background: #1c6eff; color: white; height: 40px;">提交</button>
 ```
 
 ✅ **Do**：
-```vue
-<a-button mode="primary" size="lg">提交</a-button>
+```html
+<!-- 统一通过规范定义的 Utility Classes (Tailwind) 或 Class 进行配置 -->
+<button class="bg-brand text-white h-10 px-4 rounded-control">提交</button>
 ```
 
-**为什么**：组件 prop 比 style 优先级低（默认）但更可维护。inline style 会让响应式 / 主题失效。
+**为什么**：内联样式（inline style）具有最高优先权，会破坏全局主题变量（亮暗色主题）的响应性切换，导致后期维护极其困难。
 
 ---
 
@@ -343,38 +350,36 @@ motionEaseOutQuint:  cubic-bezier(0.22, 1, 0.36, 1)
 
 ❌ **Don't**：
 ```css
-/* 通配式规则 */
-:deep(.ant-form) .ant-select,
-:deep(.ant-form) .slider-input-group {
+/* 试图用过于宽泛的选择器写死宽度 */
+.form-container .input-control {
   width: 100% !important;
 }
 
-/* 然后在外层写约束 */
-.align-with-slider {
-  width: 440px !important;    /* 被上面的规则覆盖，因为特异性更高 */
+/* 试图在此处局部约束宽度，但因为选择器特异性（权重）较低，导致 100% 依然生效 */
+.align-input {
+  width: 440px !important; 
 }
 ```
 
 ✅ **Do**：
 ```css
-/* 方式一：用 :not() 排除需要约束的元素 */
-:deep(.ant-form) .ant-select:not(.align-with-slider) {
+/* 方式一：使用 :not() 排除不需要 100% 宽度的元素 */
+.form-container .input-control:not(.align-input) {
   width: 100% !important;
 }
 
-/* 方式二：约束规则使用相同或更高的特异性 */
-:deep(.ant-form) .align-with-slider {
+/* 方式二：局部约束类采用同等或更高的特异性选择器 */
+.form-container .align-input {
   width: 440px !important;
   max-width: 440px !important;
 }
 ```
 
-**为什么**：两条规则都带 `!important` 时，CSS 层叠不看 `!important`，而是比较选择器特异性。`:deep(.ant-form) .ant-select` 比 `.align-with-slider` 特异性更高，所以 `100%` 永远赢。这种"自己写的样式打架"是最难排查的布局 Bug。
+**为什么**：当多条规则都带有 `!important` 时，浏览器会通过选择器特异性（Specificity）决定优先级。使用通配类（如 scoped CSS 中的通配类或过于宽泛的 class）容易导致局部自定义宽度失效，这是开发布局时最难排查的 CSS 冲突。
 
 **强制要求**：
-1. 写任何 `!important` 规则前，先搜索当前文件中是否已有针对同一属性的其他 `!important` 规则
-2. 如果存在冲突，必须在同一处统一处理，不要在不同位置分别写
-3. 避免通配式 `width: 100% !important`，优先用 `flex: 1; min-width: 0` 等自适应方案替代
+1. 避免使用过于宽泛的全局 `width: 100% !important`，优先考虑 `flex: 1` 或 `flex-grow` 的弹性布局。
+2. 局部覆盖时，必须保证选择器权重至少等同于原选择器。
 
 ---
 
@@ -425,21 +430,29 @@ label列宽 = 最长label字数 × 14 + 星号占位(12px) + 间距(16px)
 
 ---
 
-## 自检 15 条 checklist（下游 agent 写代码前过一遍）
+## 规则 21 — 标签（Tag）文字折行与截断
 
-1. ✅ 颜色全部用 `var(--sase-color-*)` 而不是 hex？
-2. ✅ 间距是 2/4/8/12/16/24/32 之一？
-3. ✅ 字号是 10/12/14/16/20/24/30 之一？
-4. ✅ 圆角按层级用对了（控件 sm=2 / 容器 md=4）？
-5. ✅ 阴影用 `boxShadowSm/Md/Lg`？
-6. ✅ 按钮 mode 用了对的语义（一屏一 primary）？
-7. ✅ 危险/警告级别选对了（risk/warning/error/fatal）？
-8. ✅ 浮层用 `a-modal/Drawer/Popover` 而不是自写？
-9. ✅ class 加了项目前缀（不污染 sase-）？
-10. ✅ 动效用 motion token？
-11. ✅ disabled 状态 cursor 是 not-allowed？
-12. ✅ 响应式用了 4 断点之一（不是任意 px）？
-13. ✅ 同一属性是否存在多条 `!important` 规则互相覆盖？（规则 18）
-14. ✅ Label 宽度是否在浏览器中实测过，而非纯数学推算？（规则 19）
-15. ✅ 布局/样式修改后是否在浏览器中做过视觉验证？（规则 20）
+❌ **Don't**：
+标签文字由于过长或被弹性盒挤压而折行显示，破坏页面行高及对齐。
+```html
+<span class="inline-flex items-center px-2 py-0.5 rounded-control text-xs bg-brand/10 text-brand">文件 Hash</span>
+```
+
+✅ **Do**：
+使用 `flex-shrink-0 whitespace-nowrap` 强制禁止折行，在空间受限时通过 `truncate` 截断（需合理设置 `max-w`），并绑定 `title` 或 Tooltip 进行悬浮提示。
+```html
+<span class="inline-flex items-center px-2 py-0.5 rounded-control text-xs bg-brand/10 text-brand flex-shrink-0 whitespace-nowrap truncate max-w-[80px]" title="文件 Hash">文件 Hash</span>
+```
+
+**为什么**：标签主要在紧凑场景下作辅助状态/类型标识。如果允许折行会意外拉伸单元格/容器高度，从而打破整体垂直格栅和排版平衡。
+
+---
+
+## 自检要求
+
+为了保证代码输出质量，我们在单独的文件中维护了完整的检视清单。
+
+👉 **[点击查阅：SD 验收自检清单 (Inspection Checklist)](./inspection-checklist.md)**
+
+**说明：** 在完成代码后，请务必核对该清单中的所有要求。
 
