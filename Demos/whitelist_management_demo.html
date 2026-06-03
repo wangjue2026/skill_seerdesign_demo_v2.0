@@ -1,0 +1,3568 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <title>下一代端点安全 - 白名单管理</title>
+
+  <!-- 引入 Google Fonts 字体库 (Inter 用于常规字, Outfit 用于数字/标签) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap"
+    rel="stylesheet">
+
+  <!-- 引入 Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'PingFang SC', 'sans-serif'],
+            outfit: ['Outfit', 'sans-serif'],
+            mono: ['Fira Code', 'Courier New', 'monospace'],
+          },
+          fontSize: {
+            'xs': ['12px', '20px'],   // 字号 12px, 行高 20px (常规/表格)
+            'md': ['14px', '22px'],   // 字号 14px, 行高 22px (表单/弹窗按钮)
+            'lg': ['16px', '24px'],   // 字号 16px, 行高 24px (标题)
+            'xl': ['20px', '28px'],
+          },
+          borderRadius: {
+            'control': '2px',         // 控件圆角 2px
+            'container': '4px',       // 容器卡片圆角 4px
+            'table': '0px',           // 表格直角
+          },
+          spacing: {
+            '0.5': '2px',
+            '1': '4px',
+            '2': '8px',
+            '3': '12px',
+            '4': '16px',
+            '6': '24px',
+            '8': '32px',
+          },
+          colors: {
+            brand: {
+              DEFAULT: 'var(--color-blue)',      // 品牌蓝 #1C6EFF
+              hover: 'var(--color-blue-l10)',    // 悬浮蓝 #4FA1FF
+              active: 'var(--color-blue-d10)',   // 点击蓝 #1458CC
+              lightBg: 'var(--color-blue-l50)',  // 选中浅蓝背景 #E8F4FF
+            },
+            risk: 'var(--color-red)',            // #F52727
+            warning: 'var(--color-orange)',      // #FA721B
+            text: {
+              DEFAULT: 'var(--color-graphite-d40)', // 正文 #2F3540
+              title: 'var(--color-graphite-d30)',   // 标题 #454C59
+              mute: 'var(--color-graphite)',        // 辅助色 #A1A7B3
+            },
+            border: 'var(--color-graphite-l20)',    // 一级边框 #D3D7DE
+            bg: {
+              light: 'var(--color-graphite-l50)',   // 浅底背景 #F7F9FC
+              line: 'var(--color-graphite-l30)',    // 分割线 #E1E5EB
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- 引入 SeerDesign 全局样式与覆盖类名 -->
+  <link rel="stylesheet" href="../assets/css-overrides.css?v=2">
+
+  <!-- 引入 Alpine.js (轻量声明式交互，免构建) -->
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
+  <style>
+    /* ========================================================
+       1. DR 导航边栏样式 (深色背景 #272E38)
+       ======================================================== */
+    .dr-sidebar {
+      background-color: #272E38;
+      font-family: var(--seer-font-family);
+    }
+
+    .dr-menu-group-title {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--color-graphite);
+      padding: 8px 16px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      user-select: none;
+    }
+
+    /* 一级菜单样式 */
+    .dr-menu-item-l1 {
+      height: 40px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 400;
+      color: #FFFFFF;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .dr-menu-item-l1:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    /* 一级菜单叶子节点选中态 */
+    .dr-menu-item-l1.leaf-selected {
+      background: linear-gradient(90deg, rgba(28, 110, 255, 0.2) 0%, rgba(28, 110, 255, 0) 100%);
+      font-weight: 600;
+    }
+
+    .dr-menu-item-l1.leaf-selected::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background-color: var(--color-blue);
+      z-index: 10;
+    }
+
+    .dr-menu-item-l1.leaf-selected .menu-icon {
+      color: var(--color-blue) !important;
+    }
+
+    /* 父级高亮 (一级菜单包含子菜单且子菜单选中时) */
+    .dr-menu-item-l1.parent-active {
+      background-color: #1E232B;
+    }
+
+    .dr-menu-item-l1.parent-active .menu-icon {
+      color: var(--color-blue) !important;
+    }
+
+    /* 二级菜单样式 */
+    .dr-menu-item-l2 {
+      height: 36px;
+      padding: 0 16px 0 40px;
+      /* 文字起始坐标 40px */
+      display: flex;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 400;
+      color: #FFFFFF;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .dr-menu-item-l2:hover {
+      background-color: rgba(255, 255, 255, 0.03);
+    }
+
+    /* 二级菜单选中态 */
+    .dr-menu-item-l2.selected {
+      background: linear-gradient(90deg, rgba(28, 110, 255, 0.2) 0%, rgba(28, 110, 255, 0) 100%);
+      font-weight: 600;
+    }
+
+    .dr-menu-item-l2.selected::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      /* 3px 垂直蓝色条 */
+      background-color: var(--color-blue);
+      z-index: 10;
+    }
+
+    /* 子菜单容器 (底色 #1E232B) */
+    .dr-submenu {
+      background-color: #1E232B;
+      overflow: hidden;
+      transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ========================================================
+       2. 布局定位与基本容器
+       ======================================================== */
+    .app-layout {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .content-viewport {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--color-graphite-l50);
+    }
+
+    /* 页面标题栏 (48px) */
+    .page-header-bar {
+      height: 48px;
+      background-color: #FFFFFF;
+      border-bottom: 1px solid var(--color-graphite-l30);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      flex-shrink: 0;
+    }
+
+    /* 页面内容卡片外间距 */
+    .page-content-card {
+      flex: 1;
+      background-color: #FFFFFF;
+      border-radius: 4px;
+      /* 容器圆角 4px */
+      margin: 8px 12px 8px 12px;
+      /* 上 8px, 左右 12px, 下 8px */
+      padding: 12px 12px 12px 12px;
+      /* 左右内间距 12px */
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    /* ========================================================
+       3. 抽屉 / 弹窗特定层级及遮罩
+       ======================================================== */
+    .drawer-overlay,
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(30, 35, 43, 0.45);
+      z-index: 990;
+    }
+
+    .sd-drawer-container {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 800px;
+      /* SeerDesign 默认宽度 800px */
+      background-color: #FFFFFF;
+      box-shadow: var(--seer-dropshadow-s3);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .modal-container {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 480px;
+      background-color: #FFFFFF;
+      border-radius: 4px;
+      box-shadow: var(--seer-dropshadow-s3);
+      z-index: 1010;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Toast 提示容器 */
+    .toast-box {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1100;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background-color: #FFFFFF;
+      border-radius: 2px;
+      box-shadow: 0 4px 16px rgba(30, 35, 43, 0.14);
+      border: 1px solid var(--color-graphite-l30);
+      min-height: 32px;
+    }
+
+    /* 表格自适应行高度 */
+    .sd-table td {
+      height: auto !important;
+      min-height: 40px;
+      padding-top: 4px !important;
+      padding-bottom: 4px !important;
+      vertical-align: middle !important;
+    }
+
+    /* 滚动条样式美化 */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: rgba(120, 130, 145, 0.3);
+      border-radius: 3px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    /* 修复 Safari 下多选框列被挤压或隐藏的问题 (覆盖原有 padding 确保 content-box 有足够空间) */
+    .sd-table th.sd-table-selection-column,
+    .sd-table td.sd-table-selection-column {
+      padding: 0 8px !important;
+    }
+
+    /* 修复 Safari 下 flex 子元素 truncate 不生效撑破容器的问题 */
+    .truncate {
+      min-width: 0;
+    }
+
+    /* ========================================================
+       7. SeerDesign 核心 Token 映射 & 动态表格自定义列设置样式
+       ======================================================== */
+    :root {
+      --ix-reset-color-text: #2f3540;
+      --ix-reset-color-text-title: #2f3540;
+      --ix-reset-color-bg: #ffffff;
+      --ix-reset-color-link: #1c6eff;
+      --ix-reset-font-family: pingfang SC, helvetica neue, arial, hiragino sans gb, microsoft yahei ui, microsoft yahei, simsun, sans-serif;
+      --ix-reset-font-size: 12px;
+      
+      --ix-color-primary: #1c6eff;
+      --ix-color-primary-hover: #458fff;
+      --ix-color-primary-active: #0d51d9;
+      --ix-color-text: #2f3540;
+      --ix-color-border: #d3d7de;
+      --ix-color-border-secondary: #e1e5eb;
+      --ix-color-white: #ffffff;
+      --ix-box-shadow-md: 0 4px 16px 0px rgba(30, 35, 43, 0.14);
+      --ix-color-container-bg: #ffffff;
+      --ix-color-container-bg-hover: #f7f9fc;
+      --ix-color-container-bg-active: #e8f4ff;
+      --ix-color-container-bg-disabled: #edf1f7;
+      --ix-color-emphasized-container-bg: #edf1f7;
+      --ix-color-emphasized-container-bg-hover: #e1e5eb;
+      --ix-color-text-placeholder: #a1a7b3;
+      --ix-color-text-disabled: #bec3cc;
+      --ix-color-text-title: #2f3540;
+      --ix-color-text-title-secondary: #454c59;
+      --ix-color-text-info: #6f7785;
+      --ix-color-icon: #5e6573;
+      --ix-color-icon-info: #bec3cc;
+      --ix-color-icon-hover: #1c6eff;
+      
+      --ix-component-border-radius: 2px;
+      --ix-overlay-bg-color: #ffffff;
+      --ix-overlay-border-radius: 2px;
+      --ix-popover-font-size: 12px;
+      --ix-popover-color: #6f7785;
+      --ix-popover-min-width: 240px;
+      --ix-control-height-sm: 24px;
+    }
+
+    /* 表格布局约束 */
+    .ix-table-container {
+      position: relative;
+      border: 1px solid var(--ix-color-border-secondary);
+      background-color: var(--ix-color-white);
+      width: 100%;
+      overflow: auto;
+    }
+    table.ix-table-table {
+      table-layout: fixed !important;
+      border-collapse: collapse !important;
+      width: 100% !important;
+      background-color: var(--ix-color-white);
+    }
+    
+    /* 强约束单元格渲染 */
+    table.ix-table-table th, table.ix-table-table td {
+      background-clip: padding-box !important;
+      box-sizing: border-box !important;
+      font-size: 12px !important;
+      font-family: var(--ix-reset-font-family) !important;
+      text-align: left;
+      vertical-align: middle;
+      border: none !important;
+      border-bottom: 1px solid var(--ix-color-border-secondary) !important;
+    }
+    
+    /* 表头样式 */
+    table.ix-table-table th {
+      background-color: var(--ix-color-emphasized-container-bg) !important;
+      color: var(--ix-color-text-title-secondary) !important;
+      font-weight: 400 !important;
+      white-space: nowrap !important;
+      position: relative;
+    }
+    
+    /* 表头分割线 */
+    table.ix-table-table th:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 25%;
+      height: 50%;
+      width: 1px;
+      background-color: var(--ix-color-border-secondary);
+    }
+    
+    /* 表体行 hover 态 */
+    table.ix-table-table tbody tr:hover td {
+      background-color: var(--ix-color-container-bg-hover) !important;
+    }
+    
+    /* 密度类定义 */
+    .density-compact th { height: 32px !important; padding: 0 8px !important; }
+    .density-compact td { height: 32px !important; padding: 0 8px !important; }
+    .density-medium th { height: 32px !important; padding: 0 12px !important; }
+    .density-medium td { height: 40px !important; padding: 0 12px !important; }
+    .density-loose th { height: 40px !important; padding: 0 16px !important; }
+    .density-loose td { height: 48px !important; padding: 0 16px !important; }
+    
+    /* 冻结列样式 */
+    .ix-table-fix-start {
+      position: sticky !important;
+      z-index: 10;
+      background-color: var(--ix-color-white) !important;
+    }
+    .ix-table-thead .ix-table-fix-start {
+      z-index: 15;
+      background-color: var(--ix-color-emphasized-container-bg) !important;
+    }
+    .ix-table-fix-end {
+      position: sticky !important;
+      z-index: 10;
+      background-color: var(--ix-color-white) !important;
+    }
+    .ix-table-thead .ix-table-fix-end {
+      z-index: 15;
+      background-color: var(--ix-color-emphasized-container-bg) !important;
+    }
+    
+    /* 气泡设置面板样式 */
+    .ix-pro-table-layout-tool {
+      font-family: var(--ix-reset-font-family);
+      font-size: var(--ix-popover-font-size);
+      color: var(--ix-color-text);
+      background-color: var(--ix-overlay-bg-color);
+      border-radius: var(--ix-overlay-border-radius);
+      box-shadow: var(--ix-box-shadow-md);
+      width: var(--ix-popover-min-width);
+      box-sizing: border-box;
+      z-index: 1006;
+      border: 1px solid var(--ix-color-border-secondary);
+    }
+    .ix-popover-wrapper {
+      padding: 0;
+    }
+    .ix-header-sm {
+      height: 36px;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--ix-color-border-secondary);
+      box-sizing: border-box;
+    }
+    .ix-header-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ix-color-text-title);
+    }
+    .ix-space {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ix-pro-table-layout-tool-header-icon {
+      font-size: 16px;
+      color: var(--ix-color-icon);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      transition: color 0.2s;
+    }
+    .ix-pro-table-layout-tool-header-icon:hover {
+      color: var(--ix-color-primary);
+    }
+    .ix-pro-table-layout-tool-header-icon-active {
+      color: var(--ix-color-primary) !important;
+    }
+    .ix-pro-table-layout-tool-header-icon svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+    
+    .ix-popover-content {
+      padding: 0;
+    }
+    .ix-pro-table-layout-tool-content {
+      padding: 8px 0 0 0;
+    }
+    
+    /* 搜索框 */
+    .ix-pro-table-layout-tool-search-wrapper {
+      padding: 0 12px 8px 12px;
+    }
+    .ix-input-sm {
+      display: inline-flex;
+      align-items: center;
+      width: 100%;
+      height: var(--ix-control-height-sm);
+      border: 1px solid var(--ix-color-border);
+      border-radius: var(--ix-component-border-radius);
+      padding: 0 8px;
+      box-sizing: border-box;
+      background-color: var(--ix-reset-color-bg);
+      transition: border-color 0.2s;
+    }
+    .ix-input-sm:hover, .ix-input-sm:focus-within {
+      border-color: var(--ix-color-primary-hover);
+    }
+    .ix-input-inner {
+      border: none;
+      outline: none;
+      font-size: 12px;
+      width: 100%;
+      color: var(--ix-color-text);
+      background: transparent;
+    }
+    .ix-input-inner::placeholder {
+      color: var(--ix-color-text-placeholder);
+    }
+    .ix-input-suffix {
+      display: flex;
+      align-items: center;
+      color: var(--ix-color-icon-info);
+    }
+    .ix-input-suffix svg {
+      width: 12px;
+      height: 12px;
+      fill: currentColor;
+    }
+    
+    /* 全部和重置 */
+    .ix-pro-table-layout-tool-select-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 32px;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--ix-color-border-secondary);
+      background-color: var(--ix-color-white);
+      box-sizing: border-box;
+    }
+    .ix-checkbox {
+      display: inline-flex;
+      align-items: center;
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--ix-color-text);
+      user-select: none;
+    }
+    .ix-checkbox-input {
+      position: relative;
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      margin-right: 8px;
+    }
+    .ix-checkbox-input-inner {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+      margin: 0;
+    }
+    .ix-checkbox-input-box {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 14px;
+      height: 14px;
+      border: 1px solid var(--ix-color-border);
+      border-radius: 2px;
+      background-color: var(--ix-color-white);
+      transition: all 0.2s;
+      box-sizing: border-box;
+    }
+    .ix-checkbox:hover .ix-checkbox-input-box {
+      border-color: var(--ix-color-primary-hover);
+    }
+    .ix-checkbox-checked .ix-checkbox-input-box {
+      background-color: var(--ix-color-primary) !important;
+      border-color: var(--ix-color-primary) !important;
+    }
+    .ix-checkbox-checked .ix-checkbox-input-box::after {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 1px;
+      width: 4px;
+      height: 7px;
+      border: 2px solid var(--ix-color-white);
+      border-top: 0;
+      border-left: 0;
+      transform: rotate(45deg);
+    }
+    .ix-checkbox-indeterminate .ix-checkbox-input-box {
+      background-color: var(--ix-color-primary) !important;
+      border-color: var(--ix-color-primary) !important;
+    }
+    .ix-checkbox-indeterminate .ix-checkbox-input-box::after {
+      content: "";
+      position: absolute;
+      left: 3px;
+      top: 5px;
+      width: 6px;
+      height: 2px;
+      background-color: var(--ix-color-white) !important;
+    }
+    .ix-checkbox-disabled {
+      cursor: not-allowed;
+      color: var(--ix-color-text-disabled);
+    }
+    .ix-checkbox-disabled .ix-checkbox-input-box {
+      background-color: var(--ix-color-emphasized-container-bg) !important;
+      border-color: var(--ix-color-border) !important;
+    }
+    .ix-checkbox-disabled.ix-checkbox-checked .ix-checkbox-input-box::after {
+      border-color: var(--ix-color-text-disabled) !important;
+    }
+    .ix-button-link {
+      background: none;
+      border: none;
+      color: var(--ix-color-link);
+      font-size: 12px;
+      cursor: pointer;
+      padding: 0;
+      line-height: inherit;
+    }
+    .ix-button-link:hover {
+      color: var(--ix-color-primary-hover);
+    }
+    
+    /* 列表树区 */
+    .ix-pro-table-layout-tool-tree-wrapper {
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    .ix-tree-node {
+      display: flex;
+      align-items: center;
+      height: 32px;
+      padding: 0 12px;
+      cursor: default;
+      transition: background-color 0.2s;
+      box-sizing: border-box;
+    }
+    .ix-tree-node:hover {
+      background-color: var(--ix-color-container-bg-hover);
+    }
+    .ix-tree-node-disabled {
+      cursor: not-allowed;
+      background-color: transparent !important;
+    }
+    .ix-tree-node-draggable-icon {
+      display: flex;
+      align-items: center;
+      color: var(--ix-color-icon-info);
+      cursor: grab;
+      margin-right: 4px;
+    }
+    .ix-tree-node-draggable-icon svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+    .ix-tree-node-draggable-icon-noop {
+      width: 18px; /* 占位宽度 */
+    }
+    .ix-tree-node-checkbox {
+      margin-right: 4px;
+    }
+    .ix-tree-node-content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-width: 0;
+    }
+    .ix-tree-node-content-label {
+      font-size: 12px;
+      color: var(--ix-color-text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .ix-tree-node-content-suffix {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ix-tree-node-content-suffix i {
+      cursor: pointer;
+      color: var(--ix-color-icon-info);
+      display: flex;
+      align-items: center;
+      transition: color 0.2s;
+    }
+    .ix-tree-node-content-suffix i:hover {
+      color: var(--ix-color-primary);
+    }
+    .ix-tree-node-content-suffix i.active {
+      color: var(--ix-color-primary) !important;
+    }
+    .ix-tree-node-content-suffix i svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+    
+    /* 拖动悬浮指示线 */
+    .drag-hover-line {
+      border-top: 2px solid var(--ix-color-primary) !important;
+    }
+    
+    /* 配置触发器 */
+    .ix-pro-table-layout-tool-trigger {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--ix-color-icon);
+      width: 100%;
+      height: 100%;
+      transition: color 0.2s;
+    }
+    .ix-pro-table-layout-tool-trigger:hover {
+      color: var(--ix-color-primary);
+    }
+    .ix-pro-table-layout-tool-trigger svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+  </style>
+</head>
+
+<body class="bg-bg-light text-text font-sans overflow-hidden w-screen h-screen">
+
+  <!-- 顶层 Alpine.js 状态管理容器 -->
+  <div class="app-layout" x-data="{
+         // 侧边栏折叠状态
+         sidebarFold: false,
+         // 策略中心二级子菜单展开状态 (默认展开)
+         submenuOpen: true,
+         // 当前选中页面 (默认为白名单 whitelist)
+         currentMenu: 'whitelist',
+         // 安全策略 Tab 状态 ('A' | 'B')
+         securityPolicyTab: 'A',
+         
+         // 搜索和过滤
+         searchQuery: '',
+         
+         // 排序参数
+         sortKey: 'updated_time',
+         sortAsc: false,
+         
+         // 分页参数
+         currentPage: 1,
+         pageSize: 10,
+         totalItems: 0,
+         
+         // 勾选行 ID 数组
+         selectedRows: [],
+         
+         // 弹窗与抽屉控制
+         showDrawer: false,
+         drawerMode: 'add', // 'add' | 'edit'
+         drawerData: {
+           id: null,
+           type: '文件',
+           value: '',
+           desc: '',
+           status: true
+         },
+         
+         // 删除确认框
+         showDeleteModal: false,
+         deleteTarget: null, // row ID or 'batch'
+         
+         // Toast 提示状态
+         toast: {
+           show: false,
+           message: '',
+           type: 'success'
+         },
+         
+         // 核心数据模型 (初始数据)
+         tableData: [
+           { id: 1, type: '文件', value: 'C:\\Windows\\System32\\drivers\\my_custom_driver.sys', desc: '安全软件内核级驱动文件', status: true, updated_time: '2026-05-28 11:20:00', created_time: '2026-05-20 09:30:00' },
+           { id: 2, type: '文件签名', value: 'Microsoft Windows Production PCA 2011', desc: '微软官方数字签名证书', status: true, updated_time: '2026-05-27 15:45:12', created_time: '2026-05-18 10:00:00' },
+           { id: 3, type: '文件 Hash', value: '5d41402abc4b2a76b9719d911017c592', desc: '核心调度服务进程校验和 (MD5)', status: true, updated_time: '2026-05-28 09:30:24', created_time: '2026-05-25 14:20:00' },
+           { id: 4, type: '进程', value: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', desc: '谷歌浏览器默认安装主进程', status: true, updated_time: '2026-05-26 18:22:10', created_time: '2026-05-22 11:15:00' },
+           { id: 5, type: 'IP / 域名', value: '*.sangfor.com.cn', desc: '深信服安全更新网络服务域名', status: true, updated_time: '2026-05-28 10:05:40', created_time: '2026-05-24 16:50:00' },
+           { id: 6, type: '文件 Hash', value: 'c3fcd3d7deee11f71c6eff272e381e23', desc: '本地日志收集中转临时校验模块', status: false, updated_time: '2026-05-25 14:10:00', created_time: '2026-05-19 13:00:00' },
+           { id: 7, type: '进程', value: 'C:\\Windows\\System32\\cmd.exe', desc: '管理员调试使用的命令行终端', status: false, updated_time: '2026-05-24 11:00:00', created_time: '2026-05-24 11:00:00' },
+           { id: 8, type: 'IP / 域名', value: '10.220.10.0/24', desc: '内网核心研发部门设备白名单网段', status: true, updated_time: '2026-05-28 08:00:00', created_time: '2026-05-21 09:00:00' },
+           { id: 9, type: '文件', value: '/usr/local/bin/node', desc: '开发与分析环境的 Node 运行二进制程序', status: true, updated_time: '2026-05-27 16:30:00', created_time: '2026-05-23 10:30:00' },
+           { id: 10, type: '文件签名', value: 'Sangfor Technologies Inc.', desc: '官方安全插件软件数字签名', status: true, updated_time: '2026-05-28 12:00:00', created_time: '2026-05-15 08:30:00' },
+           { id: 11, type: '文件 Hash', value: 'e1a7b32f3540454c59a1a7b3d3d7de1c', desc: '白名单校验测试组件临时哈希', status: false, updated_time: '2026-05-22 09:12:00', created_time: '2026-05-22 09:12:00' },
+           { id: 12, type: '进程', value: 'C:\\Windows\\explorer.exe', desc: 'Windows资源管理器外壳进程', status: true, updated_time: '2026-05-28 07:15:00', created_time: '2026-05-20 07:15:00' },
+           { id: 13, type: 'IP / 域名', value: 'github.com', Description: '代码仓库同步域名访问支持', status: true, updated_time: '2026-05-27 11:45:00', created_time: '2026-05-26 11:45:00' },
+           { id: 14, type: '文件', value: '/etc/hosts', desc: '系统静态主机IP映射解析配置文件', status: true, updated_time: '2026-05-28 12:30:00', created_time: '2026-05-27 10:00:00' }
+         ],
+                  // 布局设置相关状态
+          showPopover: false,
+          density: 'medium', // 'compact' | 'medium' | 'loose'
+          columnSearch: '',
+          draggedKey: null,
+          dragOverKey: null,
+          
+          // 气泡定位样式
+          popoverStyle: {
+            position: 'absolute',
+            left: '0px',
+            top: '0px',
+            textAlign: 'left'
+          },
+          
+          // 列模型定义
+          columns: [
+            { key: 'selection', title: '勾选', width: 40, visible: true, fixed: 'left', cannotHide: true, cannotDrag: true },
+            { key: 'serial', title: '序号', width: 50, visible: true, fixed: 'left', cannotHide: true, cannotDrag: true },
+            { key: 'value', title: '对象值', width: 320, visible: true },
+            { key: 'desc', title: '描述', width: 200, visible: true },
+            { key: 'status', title: '启用状态', width: 110, visible: true },
+            { key: 'updated_time', title: '最近更新时间', width: 160, visible: true },
+            { key: 'created_time', title: '创建时间', width: 160, visible: true },
+            { key: 'op', title: '操作', width: 120, visible: true, fixed: 'right', cannotHide: true, cannotDrag: true }
+          ],
+
+          // 计算左侧冻结偏移量
+          getLeftOffset(column) {
+            if (column.fixed !== 'left' || !column.visible) return '';
+            let offset = 0;
+            for (let col of this.columns) {
+              if (col.key === column.key) break;
+              if (col.visible && col.fixed === 'left') {
+                offset += col.width || 0;
+              }
+            }
+            return offset + 'px';
+          },
+          
+          // 计算右侧冻结偏移量 (操作列和配置列在右侧)
+          getRightOffset(column) {
+            if (column.fixed !== 'right' || !column.visible) return '';
+            let offset = 40; // 静态配置列宽度
+            let found = false;
+            for (let col of this.columns) {
+              if (col.key === column.key) {
+                found = true;
+                continue;
+              }
+              if (found && col.visible && col.fixed === 'right') {
+                offset += col.width || 0;
+              }
+            }
+            return offset + 'px';
+          },
+          
+          // 切换冻结状态
+          togglePin(col, side) {
+            if (col.cannotDrag) return;
+            if (side === 'left') {
+              col.fixed = (col.fixed === 'left') ? null : 'left';
+            } else if (side === 'right') {
+              col.fixed = (col.fixed === 'right') ? null : 'right';
+            }
+            this.reorderColumns();
+          },
+          
+          // 数组重排逻辑
+          reorderColumns() {
+            let selectionCol = this.columns.find(c => c.key === 'selection');
+            let serialCol = this.columns.find(c => c.key === 'serial');
+            let opCol = this.columns.find(c => c.key === 'op');
+            
+            let others = this.columns.filter(c => c.key !== 'selection' && c.key !== 'serial' && c.key !== 'op');
+            
+            let leftPinned = others.filter(c => c.fixed === 'left');
+            let unpinned = others.filter(c => !c.fixed);
+            let rightPinned = others.filter(c => c.fixed === 'right');
+            
+            this.columns = [
+              ...(selectionCol ? [selectionCol] : []),
+              ...(serialCol ? [serialCol] : []),
+              ...leftPinned,
+              ...unpinned,
+              ...rightPinned,
+              ...(opCol ? [opCol] : [])
+            ];
+          },
+          
+          // 全部一键隐藏/展示
+          get allVisible() {
+            let config = this.columns.filter(c => c.key !== 'selection' && c.key !== 'serial' && c.key !== 'op');
+            return config.every(c => c.visible);
+          },
+          get someVisible() {
+            let config = this.columns.filter(c => c.key !== 'selection' && c.key !== 'serial' && c.key !== 'op');
+            return config.some(c => c.visible) && !this.allVisible;
+          },
+          toggleAll() {
+            let target = !this.allVisible;
+            this.columns.forEach(c => {
+              if (c.key !== 'selection' && c.key !== 'serial' && c.key !== 'op') {
+                c.visible = target;
+              }
+            });
+          },
+          
+          // 过滤后的可显示配置列（仅用于气泡列表的过滤显示）
+          get filteredColumns() {
+            if (!this.columnSearch) return this.columns;
+            return this.columns.filter(col => {
+              if (col.key === 'selection' || col.key === 'serial' || col.key === 'op') return true;
+              return col.title && col.title.includes(this.columnSearch);
+            });
+          },
+          
+          // 拖动处理逻辑
+          handleDragStart(key) {
+            let col = this.columns.find(c => c.key === key);
+            if (col.cannotDrag) return;
+            this.draggedKey = key;
+          },
+          handleDragOver(key) {
+            let col = this.columns.find(c => c.key === key);
+            if (col.cannotDrag) return;
+            this.dragOverKey = key;
+          },
+          handleDrop(key) {
+            if (!this.draggedKey || this.draggedKey === key) return;
+            
+            let fromIdx = this.columns.findIndex(c => c.key === this.draggedKey);
+            let toIdx = this.columns.findIndex(c => c.key === key);
+            
+            if (fromIdx !== -1 && toIdx !== -1) {
+              let draggedCol = this.columns[fromIdx];
+              let targetCol = this.columns[toIdx];
+              
+              if (!draggedCol.cannotDrag && !targetCol.cannotDrag) {
+                this.columns.splice(fromIdx, 1);
+                let newToIdx = this.columns.findIndex(c => c.key === key);
+                this.columns.splice(newToIdx, 0, draggedCol);
+                this.reorderColumns();
+              }
+            }
+            
+            this.draggedKey = null;
+            this.dragOverKey = null;
+          },
+          
+          resetColumns() {
+            this.columns = [
+              { key: 'selection', title: '勾选', width: 40, visible: true, fixed: 'left', cannotHide: true, cannotDrag: true },
+              { key: 'serial', title: '序号', width: 50, visible: true, fixed: 'left', cannotHide: true, cannotDrag: true },
+              { key: 'value', title: '对象值', width: 320, visible: true },
+              { key: 'desc', title: '描述', width: 200, visible: true },
+              { key: 'status', title: '启用状态', width: 110, visible: true },
+              { key: 'updated_time', title: '最近更新时间', width: 160, visible: true },
+              { key: 'created_time', title: '创建时间', width: 160, visible: true },
+              { key: 'op', title: '操作', width: 120, visible: true, fixed: 'right', cannotHide: true, cannotDrag: true }
+            ];
+            this.density = 'medium';
+            this.columnSearch = '';
+          },
+          
+          togglePopover(event) {
+            this.showPopover = !this.showPopover;
+            if (this.showPopover) {
+              const trigger = event.currentTarget;
+              const rect = trigger.getBoundingClientRect();
+              const popoverWidth = 240; // 对应 var(--ix-popover-min-width)
+              const left = rect.right + window.scrollX - popoverWidth;
+              const top = rect.bottom + window.scrollY + 4; // 距离按钮底部 4px
+              this.popoverStyle = {
+                position: 'absolute',
+                left: `${left}px`,
+                top: `${top}px`,
+                textAlign: 'left'
+              };
+            }
+          },
+
+         // 弹出 Toast
+         showToast(msg, type = 'success') {
+           this.toast.message = msg;
+           this.toast.type = type;
+           this.toast.show = true;
+           setTimeout(() => { this.toast.show = false; }, 2000);
+         },
+         
+         // 触发单个状态切换
+         toggleRowStatus(row) {
+           row.status = !row.status;
+           row.updated_time = new Date().toISOString().replace('T', ' ').substring(0, 19);
+           this.showToast(`已成功${row.status ? '启用' : '禁用'}白名单对象`);
+         },
+         
+         // 排序触发
+         handleSort(key) {
+           if (this.sortKey === key) {
+             this.sortAsc = !this.sortAsc;
+           } else {
+             this.sortKey = key;
+             this.sortAsc = true;
+           }
+         },
+         
+         // 获取计算后的展示数据
+         get filteredAndSortedData() {
+           let data = [...this.tableData];
+           
+           // 1. 过滤
+           if (this.searchQuery.trim()) {
+             const q = this.searchQuery.toLowerCase();
+             data = data.filter(row => 
+               row.value.toLowerCase().includes(q) || 
+               (row.desc && row.desc.toLowerCase().includes(q)) ||
+               row.type.toLowerCase().includes(q)
+             );
+           }
+           
+           // 2. 排序 (对象值、更新时间、创建时间)
+           if (this.sortKey) {
+             data.sort((a, b) => {
+               let valA = a[this.sortKey] || '';
+               let valB = b[this.sortKey] || '';
+               if (typeof valA === 'string') {
+                 valA = valA.toLowerCase();
+                 valB = valB.toLowerCase();
+               }
+               if (valA < valB) return this.sortAsc ? -1 : 1;
+               if (valA > valB) return this.sortAsc ? 1 : -1;
+               return 0;
+             });
+           }
+           
+           this.totalItems = data.length;
+           return data;
+         },
+         
+         // 获取当前分页的数据
+         get paginatedData() {
+           const data = this.filteredAndSortedData;
+           const start = (this.currentPage - 1) * this.pageSize;
+           return data.slice(start, start + this.pageSize);
+         },
+         
+         // 获取当前页的 ID 列表 (用于全选判断)
+         get currentPageRowIds() {
+           return this.paginatedData.map(r => r.id);
+         },
+         
+         // 判断是否全选
+         get isAllSelected() {
+           const pageIds = this.currentPageRowIds;
+           if (pageIds.length === 0) return false;
+           return pageIds.every(id => this.selectedRows.includes(id));
+         },
+         
+         // 切换全选
+         toggleAllRows() {
+           const pageIds = this.currentPageRowIds;
+           if (this.isAllSelected) {
+             // 取消本页选中
+             this.selectedRows = this.selectedRows.filter(id => !pageIds.includes(id));
+           } else {
+             // 选中本页全部
+             pageIds.forEach(id => {
+               if (!this.selectedRows.includes(id)) {
+                 this.selectedRows.push(id);
+               }
+             });
+           }
+         },
+         
+         // 打开新增抽屉
+         openAddDrawer() {
+           this.drawerMode = 'add';
+           this.drawerData = {
+             id: null,
+             type: '文件',
+             value: '',
+             desc: '',
+             status: true
+           };
+           this.showDrawer = true;
+         },
+         
+         // 打开编辑抽屉
+         openEditDrawer(row) {
+           this.drawerMode = 'edit';
+           this.drawerData = {
+             id: row.id,
+             type: row.type,
+             value: row.value,
+             desc: row.desc || '',
+             status: row.status
+           };
+           this.showDrawer = true;
+         },
+         
+         // 保存表单提交
+         saveDrawerForm() {
+           if (!this.drawerData.value.trim()) {
+             this.showToast('请输入对象值', 'error');
+             return;
+           }
+           
+           const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
+           
+           if (this.drawerMode === 'add') {
+             // 生成新 ID
+             const newId = this.tableData.length ? Math.max(...this.tableData.map(r => r.id)) + 1 : 1;
+             this.tableData.push({
+               id: newId,
+               type: this.drawerData.type,
+               value: this.drawerData.value.trim(),
+               desc: this.drawerData.desc.trim(),
+               status: this.drawerData.status,
+               updated_time: nowStr,
+               created_time: nowStr
+             });
+             this.showToast('新增白名单成功');
+           } else {
+             // 更新数据
+             const index = this.tableData.findIndex(r => r.id === this.drawerData.id);
+             if (index !== -1) {
+               this.tableData[index].type = this.drawerData.type;
+               this.tableData[index].value = this.drawerData.value.trim();
+               this.tableData[index].desc = this.drawerData.desc.trim();
+               this.tableData[index].status = this.drawerData.status;
+               this.tableData[index].updated_time = nowStr;
+             }
+             this.showToast('更新白名单成功');
+           }
+           
+           this.showDrawer = false;
+           // 重置分页到第 1 页展示新内容
+           this.currentPage = 1;
+         },
+         
+         // 准备单行删除
+         confirmDeleteRow(id) {
+           this.deleteTarget = id;
+           this.showDeleteModal = true;
+         },
+         
+         // 准备批量删除
+         confirmBatchDelete() {
+           if (this.selectedRows.length === 0) return;
+           this.deleteTarget = 'batch';
+           this.showDeleteModal = true;
+         },
+         
+         // 执行删除
+         executeDelete() {
+           if (this.deleteTarget === 'batch') {
+             // 批量删除
+             this.tableData = this.tableData.filter(r => !this.selectedRows.includes(r.id));
+             this.showToast(`已成功删除选中的 ${this.selectedRows.length} 个白名单对象`);
+             this.selectedRows = [];
+           } else if (this.deleteTarget) {
+             // 单行删除
+             this.tableData = this.tableData.filter(r => r.id !== this.deleteTarget);
+             // 如果勾选里有也去掉
+             this.selectedRows = this.selectedRows.filter(id => id !== this.deleteTarget);
+             this.showToast('已成功删除该白名单对象');
+           }
+           this.showDeleteModal = false;
+           this.deleteTarget = null;
+           
+           // 处理分页退回 (如果当前页删空了)
+           const maxPages = Math.ceil(this.filteredAndSortedData.length / this.pageSize) || 1;
+           if (this.currentPage > maxPages) {
+             this.currentPage = maxPages;
+           }
+         }
+       }">
+
+    <!-- 1. 左侧导航边栏 (固定高度，深色背景) -->
+    <div class="dr-sidebar flex flex-col flex-shrink-0 text-white select-none transition-all duration-200"
+      :class="sidebarFold ? 'w-[54px]' : 'w-[200px]'">
+
+      <!-- 1.1 顶部产品Logo区 (高度 56px) -->
+      <div class="h-[56px] px-2 flex items-center border-b border-[#363f4b] flex-shrink-0 overflow-hidden relative">
+        <!-- Logo (32x32px) -->
+        <div
+          class="w-8 h-8 rounded-control flex items-center justify-center flex-shrink-0 font-bold text-xs tracking-wide text-white transition-all duration-200"
+          :class="sidebarFold ? 'ml-[3px]' : 'ml-2'" style="background: linear-gradient(135deg, #4BFFC6, #1C6EFF);">
+          DR
+        </div>
+        <!-- 产品名称 (14px, font-semibold 600, 紧密排列) -->
+        <span class="ml-2 text-[14px] font-semibold text-white tracking-wide truncate transition-opacity duration-200"
+          x-show="!sidebarFold" x-transition.opacity>
+          下一代端点安全
+        </span>
+        <!-- 折叠/展开按钮 (右上角垂直居中) -->
+        <button
+          class="w-6 h-6 rounded hover:bg-white/10 flex items-center justify-center text-text-mute hover:text-white transition-colors absolute right-1 top-1/2 -translate-y-1/2"
+          @click="sidebarFold = !sidebarFold">
+          <svg class="w-4 h-4 transform transition-transform duration-200" :class="sidebarFold && 'rotate-180'"
+            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7">
+            </path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- 1.2 可滚动菜单列表 -->
+      <div class="flex-1 overflow-y-auto py-2 custom-scrollbar">
+        <!-- 功能全览 -->
+        <div class="dr-menu-item-l1" :class="currentMenu === 'overview' && 'leaf-selected'"
+          @click="currentMenu = 'overview'; showToast('切换至功能全览')">
+          <span class="w-4 h-4 mr-2 text-text-mute menu-icon flex-shrink-0 flex items-center justify-center">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z">
+              </path>
+            </svg>
+          </span>
+          <span x-show="!sidebarFold" class="truncate">功能全览</span>
+        </div>
+
+        <!-- 快捷入口 -->
+        <div class="dr-menu-item-l1" :class="currentMenu === 'quick-access' && 'leaf-selected'"
+          @click="currentMenu = 'quick-access'; showToast('切换至快捷入口')">
+          <span class="w-4 h-4 mr-2 text-text-mute menu-icon flex-shrink-0 flex items-center justify-center">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+          </span>
+          <span x-show="!sidebarFold" class="truncate">快捷入口</span>
+        </div>
+
+        <!-- 安全监控 -->
+        <div class="dr-menu-item-l1" :class="currentMenu === 'security-monitor' && 'leaf-selected'"
+          @click="currentMenu = 'security-monitor'; showToast('切换至安全监控')">
+          <span class="w-4 h-4 mr-2 text-text-mute menu-icon flex-shrink-0 flex items-center justify-center">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
+              </path>
+            </svg>
+          </span>
+          <span x-show="!sidebarFold" class="truncate">安全监控</span>
+        </div>
+
+        <!-- 检测响应 -->
+        <div class="dr-menu-item-l1" :class="currentMenu === 'detection-response' && 'leaf-selected'"
+          @click="currentMenu = 'detection-response'; showToast('切换至检测响应')">
+          <span class="w-4 h-4 mr-2 text-text-mute menu-icon flex-shrink-0 flex items-center justify-center">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z">
+              </path>
+            </svg>
+          </span>
+          <span x-show="!sidebarFold" class="truncate">检测响应</span>
+        </div>
+
+        <!-- 病毒查杀 -->
+        <div class="dr-menu-item-l1" :class="currentMenu === 'virus-scan' && 'leaf-selected'"
+          @click="currentMenu = 'virus-scan'; showToast('切换至病毒查杀')">
+          <span class="w-4 h-4 mr-2 text-text-mute menu-icon flex-shrink-0 flex items-center justify-center">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+              </path>
+            </svg>
+          </span>
+          <span x-show="!sidebarFold" class="truncate">病毒查杀</span>
+        </div>
+
+        <!-- 隔离区管理 -->
+        <div class="dr-menu-item-l1" :class="currentMenu === 'quarantine' && 'leaf-selected'"
+          @click="currentMenu = 'quarantine'; showToast('切换至隔离区管理')">
+          <span class="w-4 h-4 mr-2 text-text-mute menu-icon flex-shrink-0 flex items-center justify-center">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636">
+              </path>
+            </svg>
+          </span>
+          <span x-show="!sidebarFold" class="truncate">隔离区管理</span>
+        </div>
+
+        <!-- 客户端管理 -->
+        <div class="dr-menu-item-l1" :class="currentMenu === 'client-management' && 'leaf-selected'"
+          @click="currentMenu = 'client-management'; showToast('切换至客户端管理')">
+          <span class="w-4 h-4 mr-2 text-text-mute menu-icon flex-shrink-0 flex items-center justify-center">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+              </path>
+            </svg>
+          </span>
+          <span x-show="!sidebarFold" class="truncate">客户端管理</span>
+        </div>
+
+        <!-- 策略中心 (包含二级子菜单，默认展开) -->
+        <div>
+          <!-- 一级策略中心入口 -->
+          <div class="dr-menu-item-l1" :class="submenuOpen && 'parent-active'" @click="submenuOpen = !submenuOpen">
+            <span class="w-4 h-4 mr-2 text-text-mute menu-icon flex-shrink-0 flex items-center justify-center">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4">
+                </path>
+              </svg>
+            </span>
+            <span x-show="!sidebarFold" class="truncate">策略中心</span>
+            <!-- 展开折叠箭头 -->
+            <svg x-show="!sidebarFold"
+              class="w-3 h-3 ml-auto text-text-mute transform transition-transform duration-200"
+              :class="submenuOpen && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </div>
+
+          <!-- 策略中心下的二级导航 -->
+          <div class="dr-submenu" x-show="submenuOpen && !sidebarFold"
+            x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 max-h-0"
+            x-transition:enter-end="opacity-100 max-h-40" x-transition:leave="transition ease-in duration-100"
+            x-transition:leave-start="opacity-100 max-h-40" x-transition:leave-end="opacity-0 max-h-0">
+            <div class="dr-menu-item-l2" :class="currentMenu === 'security-policy' && 'selected'"
+              @click="currentMenu = 'security-policy'; showToast('切换至安全策略')">
+              安全策略
+            </div>
+            <div class="dr-menu-item-l2" :class="currentMenu === 'custom-ioc' && 'selected'"
+              @click="currentMenu = 'custom-ioc'; showToast('切换至自定义 IOC')">
+              自定义 IOC
+            </div>
+            <div class="dr-menu-item-l2" :class="currentMenu === 'custom-ioa' && 'selected'"
+              @click="currentMenu = 'custom-ioa'; showToast('切换至自定义 IOA')">
+              自定义 IOA
+            </div>
+            <div class="dr-menu-item-l2" :class="currentMenu === 'whitelist' && 'selected'"
+              @click="currentMenu = 'whitelist'">
+              白名单管理
+            </div>
+          </div>
+        </div>
+
+        <!-- 任务中心 -->
+        <div class="dr-menu-item-l1" :class="currentMenu === 'task-center' && 'leaf-selected'"
+          @click="currentMenu = 'task-center'; showToast('切换至任务中心')">
+          <span class="w-4 h-4 mr-2 text-text-mute menu-icon flex-shrink-0 flex items-center justify-center">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
+              </path>
+            </svg>
+          </span>
+          <span x-show="!sidebarFold" class="truncate">任务中心</span>
+        </div>
+
+        <!-- 系统管理 -->
+        <div class="dr-menu-item-l1" :class="currentMenu === 'system-management' && 'leaf-selected'"
+          @click="currentMenu = 'system-management'; showToast('切换至系统管理')">
+          <span class="w-4 h-4 mr-2 text-text-mute menu-icon flex-shrink-0 flex items-center justify-center">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
+              </path>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+          </span>
+          <span x-show="!sidebarFold" class="truncate">系统管理</span>
+        </div>
+      </div>
+
+      <!-- 1.3 底部用户信息区 (高度 36px) -->
+      <div class="h-[36px] flex items-center border-t border-[#363f4b] flex-shrink-0 transition-all duration-200"
+        :class="sidebarFold ? 'justify-center px-0' : 'px-4'">
+        <!-- 头像 (16x16px) -->
+        <div
+          class="w-4 h-4 rounded-full bg-brand flex items-center justify-center text-[8px] text-white font-semibold flex-shrink-0 cursor-pointer"
+          @click="showToast('管理员设置')">
+          A
+        </div>
+        <!-- 用户名 (12px, font-normal 400) -->
+        <span class="ml-2 text-[12px] font-normal text-white/80 truncate transition-opacity duration-200"
+          x-show="!sidebarFold" x-transition.opacity>
+          Admin
+        </span>
+      </div>
+    </div>
+
+    <!-- 2. 右侧主视图区 -->
+    <div class="content-viewport">
+
+      <!-- 2.1 页面标题栏 (固高 48px) -->
+      <div class="page-header-bar flex items-center justify-between">
+        <!-- 默认展示单页面标题 (字号 16px font-semibold text-text-title) -->
+        <div class="flex items-center h-full" x-show="currentMenu !== 'security-policy'">
+          <span class="text-lg font-semibold text-text-title"
+            x-text="currentMenu === 'whitelist' ? '白名单管理' : (currentMenu === 'custom-ioc' ? '自定义 IOC' : (currentMenu === 'custom-ioa' ? '自定义 IOA' : '系统管理'))">
+            白名单管理
+          </span>
+        </div>
+
+        <!-- 安全策略菜单下的 Tab 页头 -->
+        <div class="flex items-center h-full" x-show="currentMenu === 'security-policy'">
+          <span class="text-lg font-semibold text-text-title">安全策略</span>
+          <span class="w-[1px] h-4 bg-bg-line mx-3"></span>
+
+          <!-- Tabs 区域 (下划线底线重合) -->
+          <div class="flex h-full items-center">
+            <div class="relative h-full flex items-center px-4 text-xs cursor-pointer transition-colors"
+              :class="securityPolicyTab === 'A' ? 'text-brand font-semibold' : 'text-text hover:text-brand'"
+              @click="securityPolicyTab = 'A'">
+              <span>A策略</span>
+              <!-- 下划线式 Tabs, 激活下划线高度 2px，颜色品牌蓝，左上右上 2px 圆角 -->
+              <span class="absolute bottom-0 left-4 right-4 h-0.5 bg-brand rounded-t-sm"
+                x-show="securityPolicyTab === 'A'"></span>
+            </div>
+            <div class="relative h-full flex items-center px-4 text-xs cursor-pointer transition-colors"
+              :class="securityPolicyTab === 'B' ? 'text-brand font-semibold' : 'text-text hover:text-brand'"
+              @click="securityPolicyTab = 'B'">
+              <span>B策略</span>
+              <span class="absolute bottom-0 left-4 right-4 h-0.5 bg-brand rounded-t-sm"
+                x-show="securityPolicyTab === 'B'"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2.2 页面内容卡片 (外间距：上 8px, 左右 12px, 下 8px) -->
+      <div class="page-content-card">
+
+        <!-- 当切换到白名单管理时，展示基础表格页内容 -->
+        <div x-show="currentMenu === 'whitelist'" class="flex-1 flex flex-col overflow-hidden"
+          data-sase-target="页面：白名单管理">
+
+          <!-- A. Toolbar 按钮工具栏 (上边距 8px, 左右分栏) -->
+          <div class="flex items-center justify-between pb-3 flex-shrink-0">
+            <!-- 左侧操作按钮组 -->
+            <div class="flex items-center gap-2">
+              <!-- 新增 (Primary 主按钮，蓝色) -->
+              <button class="sd-btn sd-btn-primary px-4 text-xs h-8 flex-shrink-0" @click="openAddDrawer()">新增</button>
+              <!-- 删除 (危险操作，支持批量删除) -->
+              <button class="sd-btn sd-btn-default px-4 text-xs h-8 flex-shrink-0"
+                :class="selectedRows.length === 0 && 'opacity-50 cursor-not-allowed'"
+                :disabled="selectedRows.length === 0" @click="confirmBatchDelete()">删除</button>
+              <!-- 导入 -->
+              <button class="sd-btn sd-btn-default px-4 text-xs h-8 flex-shrink-0"
+                @click="showToast('打开导入配置面板')">导入</button>
+              <!-- 导出 -->
+              <button class="sd-btn sd-btn-default px-4 text-xs h-8 flex-shrink-0"
+                @click="showToast('导出数据成功')">导出</button>
+            </div>
+
+            <!-- 右侧筛选组 -->
+            <div class="flex items-center gap-2">
+              <!-- 搜索框 (宽度 240px) -->
+              <div class="basic-search w-[240px] relative h-8">
+                <input type="text" x-model="searchQuery" @input="currentPage = 1"
+                  class="sd-input w-full h-8 pr-8 text-xs outline-none focus:shadow-none" placeholder="搜索对象值或描述">
+                <div class="search-icon-wrapper absolute right-0 top-0 h-8 w-8 flex items-center justify-center gap-1">
+                  <!-- 清空按钮 -->
+                  <span class="cursor-pointer text-text-mute hover:text-brand text-[10px]"
+                    x-show="searchQuery.length > 0" @click="searchQuery = ''; currentPage = 1">✕</span>
+                  <!-- 搜索图标 -->
+                  <svg class="w-3.5 h-3.5 text-text-mute" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- 刷新按钮 (32x32px) -->
+              <button class="sd-btn sd-btn-default w-8 h-8 p-0 flex items-center justify-center flex-shrink-0"
+                @click="showToast('数据已刷新')">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H17"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- B. Table 单元格展示区 (单行表格，直角，无外边框) -->
+          <div class="flex-1 min-h-0 overflow-auto w-full custom-scrollbar ix-table-container">
+            <table class="ix-table-table" :class="'density-' + density" style="min-width: 1160px;">
+              <colgroup>
+                <template x-for="col in columns.filter(c => c.visible)" :key="col.key">
+                  <col :style="{ width: col.width + 'px' }">
+                </template>
+                <!-- 最右侧配置列固定 40px -->
+                <col style="width: 40px;">
+              </colgroup>
+              <thead class="ix-table-thead">
+                <tr class="ix-table-row">
+                  <template x-for="col in columns.filter(c => c.visible)" :key="col.key">
+                    <th :class="{ 
+                          'ix-table-cell-align-center': col.key === 'selection' || col.key === 'serial',
+                          'ix-table-fix-start': col.fixed === 'left',
+                          'ix-table-fix-end': col.fixed === 'right'
+                        }"
+                        :style="col.fixed === 'left' ? { left: getLeftOffset(col) } : (col.fixed === 'right' ? { right: getRightOffset(col) } : {})">
+                        
+                        <!-- 复选框表头 -->
+                        <template x-if="col.key === 'selection'">
+                          <span class="sd-checkbox" :class="isAllSelected && 'sd-checkbox-checked'" @click="toggleAllRows()">
+                            <span class="sd-checkbox-inner"></span>
+                          </span>
+                        </template>
+                        
+                        <!-- 序号表头 -->
+                        <template x-if="col.key === 'serial'">
+                          <span x-text="col.title || '序号'"></span>
+                        </template>
+                        
+                        <!-- 普通表头文字/排序 -->
+                        <template x-if="col.key !== 'selection' && col.key !== 'serial'">
+                          <div class="flex items-center gap-1"
+                               :class="(col.key === 'value' || col.key === 'updated_time' || col.key === 'created_time') ? 'cursor-pointer select-none hover:text-brand' : ''"
+                               @click="(col.key === 'value' || col.key === 'updated_time' || col.key === 'created_time') && handleSort(col.key)">
+                            <span x-text="col.title"></span>
+                            <!-- 如果是可排序列，显示排序指示器 -->
+                            <template x-if="col.key === 'value' || col.key === 'updated_time' || col.key === 'created_time'">
+                              <span class="flex flex-col text-[8px] leading-[6px] text-text-mute opacity-60">
+                                <span :class="sortKey === col.key && sortAsc ? 'text-brand' : ''">▲</span>
+                                <span :class="sortKey === col.key && !sortAsc ? 'text-brand' : ''">▼</span>
+                              </span>
+                            </template>
+                          </div>
+                        </template>
+                    </th>
+                  </template>
+                  
+                  <!-- 最后一列配置触发器单元格 (宽度固定为 40px) -->
+                  <th class="ix-table-fix-end" style="position: sticky; right: 0; padding: 0; text-align: center; z-index: 20;">
+                    <!-- 触发器按钮：使用 @click.stop 阻止冒泡，防止触发 body 点击监听导致气泡被立即关闭 -->
+                    <span class="ix-pro-table-layout-tool-trigger"
+                          @click.stop="togglePopover($event)">
+                      <i class="ix-icon ix-icon-ellipsis">
+                        <svg viewBox="0 0 1024 1024" focusable="false" aria-hidden="true" data-icon="ellipsis"><path d="M768 448a64 64 0 1 0 0 128 64 64 0 1 0 0-128Zm-256 0a64 64 0 1 0 0 128 64 64 0 1 0 0-128Zm-256 0a64 64 0 1 0 0 128 64 64 0 1 0 0-128Z"></path></svg>
+                      </i>
+                    </span>
+                    
+                    <!-- 气泡面板浮层：必须使用 x-teleport="body" 传送至根节点，防止被 .ix-table-container 的 overflow: auto 剪裁 -->
+                    <template x-teleport="body">
+                      <div class="ix-overlay ix-popover ix-pro-table-layout-tool"
+                           :style="popoverStyle"
+                           x-show="showPopover"
+                           x-transition.opacity
+                           @click.stop=""
+                           @click.outside="showPopover = false">
+                      <div class="ix-popover-wrapper">
+                        
+                        <!-- 头部 (Header) -->
+                        <div class="ix-header ix-header-sm">
+                          <div class="ix-header-content">
+                            <div class="ix-header-title-wrapper">
+                              <span class="ix-header-title">布局设置</span>
+                            </div>
+                          </div>
+                          <span class="ix-header-suffix">
+                            <div class="ix-space">
+                              <!-- 紧凑 -->
+                              <div class="ix-space-item" @click="density = 'compact'">
+                                <i class="ix-icon ix-icon-grid-compact ix-pro-table-layout-tool-header-icon" :class="density === 'compact' && 'ix-pro-table-layout-tool-header-icon-active'" title="紧凑">
+                                  <svg viewBox="0 0 1024 1024" focusable="false" aria-hidden="true" data-icon="grid-compact"><path d="M907.84 713.024a12.8 12.8 0 0 0 0-18.048l-27.136-27.2a12.8 12.8 0 0 0-18.112 0l-126.72 126.72-126.72-126.72a12.8 12.8 0 0 0-18.048 0l-27.2 27.2a12.8 12.8 0 0 0 0 18.048l162.944 162.944a12.8 12.8 0 0 0 18.112 0l162.88-162.944zm0-402.048a12.8 12.8 0 0 1 0 18.048l-27.136 27.2a12.8 12.8 0 0 1-18.112 0l-126.72-126.72-126.72 126.72a12.8 12.8 0 0 1-18.048 0L563.84 328.96a12.8 12.8 0 0 1 0-18.048l162.944-162.944a12.8 12.8 0 0 1 18.112 0l162.88 162.944zM140.8 192h294.4q12.8 0 12.8 12.8v38.4q0 12.8-12.8 12.8H140.8q-12.8 0-12.8-12.8v-38.4q0-12.8 12.8-12.8Zm0 192h294.4q12.8 0 12.8 12.8v38.4q0 12.8-12.8 12.8H140.8q-12.8 0-12.8-12.8v-38.4q0-12.8 12.8-12.8Zm0 192h294.4q12.8 0 12.8 12.8v38.4q0 12.8-12.8 12.8H140.8q-12.8 0-12.8-12.8v-38.4q0-12.8 12.8-12.8Zm0 192h294.4q12.8 0 12.8 12.8v38.4q0 12.8-12.8 12.8H140.8q-12.8 0-12.8-12.8v-38.4q0-12.8 12.8-12.8Z"></path></svg>
+                                </i>
+                              </div>
+                              <!-- 适中 -->
+                              <div class="ix-space-item" @click="density = 'medium'">
+                                <i class="ix-icon ix-icon-grid-medium ix-pro-table-layout-tool-header-icon" :class="density === 'medium' && 'ix-pro-table-layout-tool-header-icon-active'" title="适中">
+                                  <svg viewBox="0 0 1024 1024" focusable="false" aria-hidden="true" data-icon="grid-medium"><path d="M907.84 713.024a12.8 12.8 0 0 0 0-18.048l-27.136-27.2a12.8 12.8 0 0 0-18.112 0l-126.72 126.72-126.72-126.72a12.8 12.8 0 0 0-18.048 0l-27.2 27.2a12.8 12.8 0 0 0 0 18.048l162.944 162.944a12.8 12.8 0 0 0 18.112 0l162.88-162.944zm0-402.048a12.8 12.8 0 0 1 0 18.048l-27.136 27.2a12.8 12.8 0 0 1-18.112 0l-126.72-126.72-126.72 126.72a12.8 12.8 0 0 1-18.048 0L563.84 328.96a12.8 12.8 0 0 1 0-18.048l162.944-162.944a12.8 12.8 0 0 1 18.112 0l162.88 162.944zM140.8 192h294.4q12.8 0 12.8 12.8v102.4q0 12.8-12.8 12.8H140.8q-12.8 0-12.8-12.8V204.8q0-12.8 12.8-12.8Zm0 256h294.4q12.8 0 12.8 12.8v102.4q0 12.8-12.8 12.8H140.8q-12.8 0-12.8-12.8V460.8q0-12.8 12.8-12.8Zm0 256h294.4q12.8 0 12.8 12.8v102.4q0 12.8-12.8 12.8H140.8q-12.8 0-12.8-12.8V716.8q0-12.8 12.8-12.8Z"></path></svg>
+                                </i>
+                              </div>
+                              <!-- 宽松 -->
+                              <div class="ix-space-item" @click="density = 'loose'">
+                                <i class="ix-icon ix-icon-grid-loose ix-pro-table-layout-tool-header-icon" :class="density === 'loose' && 'ix-pro-table-layout-tool-header-icon-active'" title="宽松">
+                                  <svg viewBox="0 0 1024 1024" focusable="false" aria-hidden="true" data-icon="grid-loose"><path d="M907.84 713.024a12.8 12.8 0 0 0 0-18.048l-27.136-27.2a12.8 12.8 0 0 0-18.112 0l-126.72 126.72-126.72-126.72a12.8 12.8 0 0 0-18.048 0l-27.2 27.2a12.8 12.8 0 0 0 0 18.048l162.944 162.944a12.8 12.8 0 0 0 18.112 0l162.88-162.944zm0-402.048a12.8 12.8 0 0 1 0 18.048l-27.136 27.2a12.8 12.8 0 0 1-18.112 0l-126.72-126.72-126.72 126.72a12.8 12.8 0 0 1-18.048 0L563.84 328.96a12.8 12.8 0 0 1 0-18.048l162.944-162.944a12.8 12.8 0 0 1 18.112 0l162.88 162.944zM140.8 192h294.4q12.8 0 12.8 12.8v230.4q0 12.8-12.8 12.8H140.8q-12.8 0-12.8-12.8V204.8q0-12.8 12.8-12.8Zm0 384h294.4q12.8 0 12.8 12.8v230.4q0 12.8-12.8 12.8H140.8q-12.8 0-12.8-12.8V588.8q0-12.8 12.8-12.8Z"></path></svg>
+                                </i>
+                              </div>
+                            </div>
+                          </span>
+                        </div>
+                        
+                        <div class="ix-popover-content">
+                          <div class="ix-pro-table-layout-tool-content">
+                            
+                            <!-- 搜索关键字 -->
+                            <div class="ix-pro-table-layout-tool-search-wrapper">
+                              <span class="ix-input ix-input-sm ix-input-with-suffix">
+                                <input type="text" class="ix-input-inner" x-model="columnSearch" placeholder="搜索关键字">
+                                <span class="ix-input-suffix">
+                                  <i class="ix-icon ix-icon-search">
+                                    <svg viewBox="0 0 1024 1024" focusable="false" aria-hidden="true" data-icon="search"><path fill-rule="evenodd" d="M448 96c212.077 0 384 171.923 384 384 0 86.337-28.493 166.019-76.588 230.155l154.027 154.163c4.991 5.003 4.99 13.104-.004 18.106l-27.011 27.011c-5.002 4.993-13.103 4.995-18.106.004L712.82 758.076C643.925 823.709 550.668 864 448 864 235.923 864 64 692.077 64 480S235.923 96 448 96Zm0 64c-176.731 0-320 143.269-320 320s143.269 320 320 320 320-143.269 320-320-143.269-320-320-320Z"></path></svg>
+                                  </i>
+                                </span>
+                              </span>
+                            </div>
+                            
+                            <!-- 全部列选择与重置区 -->
+                            <div class="ix-pro-table-layout-tool-select-wrapper">
+                              <label class="ix-checkbox" :class="allVisible ? 'ix-checkbox-checked' : (someVisible ? 'ix-checkbox-indeterminate' : '')" @click.prevent="toggleAll()">
+                                <span class="ix-checkbox-input" role="checkbox">
+                                  <input type="checkbox" class="ix-checkbox-input-inner" :checked="allVisible">
+                                  <span class="ix-checkbox-input-box"></span>
+                                </span>
+                                <span class="ix-checkbox-label">全部</span>
+                              </label>
+                              <button class="ix-button ix-button-link ix-button-sm" type="button" @click="resetColumns()">
+                                <span>重置</span>
+                              </button>
+                            </div>
+                            
+                            <!-- 字段树状/拖拽列表区 -->
+                            <div class="ix-pro-table-layout-tool-tree-wrapper">
+                              <div class="ix-pro-table-layout-tool-tree">
+                                <div class="ix-tree ix-tree-blocked" role="tree">
+                                  <div class="ix-tree-content">
+                                    <div class="ix-tree-content-inner">
+                                      
+                                      <!-- 循环字段渲染 -->
+                                      <template x-for="(col, idx) in filteredColumns" :key="col.key">
+                                        <div class="ix-tree-node"
+                                             :class="{ 
+                                               'ix-tree-node-disabled': col.cannotDrag,
+                                               'drag-hover-line': dragOverKey === col.key && draggedKey !== col.key
+                                             }"
+                                             :draggable="!col.cannotDrag"
+                                             @dragstart="handleDragStart(col.key)"
+                                             @dragover.prevent="handleDragOver(col.key)"
+                                             @dragleave="if (dragOverKey === col.key) dragOverKey = null"
+                                             @drop="handleDrop(col.key)">
+                                             
+                                          <span aria-hidden="true" class="ix-tree-node-indent"></span>
+                                          
+                                          <!-- 拖拽手柄 -->
+                                          <span :class="col.cannotDrag ? 'ix-tree-node-draggable-icon-noop' : 'ix-tree-node-draggable-icon'" role="img">
+                                            <template x-if="!col.cannotDrag">
+                                              <i class="ix-icon ix-icon-holder">
+                                                <svg viewBox="0 0 1024 1024" focusable="false" aria-hidden="true" data-icon="holder"><path d="M320 256a64 64 0 1 0 128 0 64 64 0 1 0-128 0Zm256 0a64 64 0 1 0 128 0 64 64 0 1 0-128 0ZM320 512a64 64 0 1 0 128 0 64 64 0 1 0-128 0Zm256 0a64 64 0 1 0 128 0 64 64 0 1 0-128 0ZM320 768a64 64 0 1 0 128 0 64 64 0 1 0-128 0Zm256 0a64 64 0 1 0 128 0 64 64 0 1 0-128 0Z"></path></svg>
+                                              </i>
+                                            </template>
+                                          </span>
+                                          
+                                          <!-- 复选框 -->
+                                          <label class="ix-checkbox ix-tree-node-checkbox" 
+                                                 :class="{ 
+                                                   'ix-checkbox-checked': col.visible, 
+                                                   'ix-checkbox-disabled': col.cannotHide 
+                                                 }"
+                                                 @click.prevent="if (!col.cannotHide) col.visible = !col.visible">
+                                            <span class="ix-checkbox-input" role="checkbox">
+                                              <input type="checkbox" class="ix-checkbox-input-inner" :checked="col.visible" :disabled="col.cannotHide">
+                                              <span class="ix-checkbox-input-box"></span>
+                                            </span>
+                                          </label>
+                                          
+                                          <!-- 字段信息及固定按钮 -->
+                                          <div class="ix-tree-node-content">
+                                            <span class="ix-tree-node-content-label" x-text="col.key === 'serial' ? '序号' : col.title"></span>
+                                            
+                                            <span class="ix-tree-node-content-suffix">
+                                              <template x-if="!col.cannotDrag">
+                                                <div class="flex items-center gap-1.5">
+                                                  <!-- 固定在列首 -->
+                                                  <i class="ix-icon ix-icon-vertical-align-top" 
+                                                     :class="col.fixed === 'left' && 'active'" 
+                                                     title="固定在列首" 
+                                                     @click="togglePin(col, 'left')">
+                                                    <svg viewBox="0 0 1024 1024" focusable="false" aria-hidden="true" data-icon="vertical-align-top"><path d="m488.96 276.032 162.88 162.944a12.8 12.8 0 0 1 0 18.048l-27.136 27.2a12.8 12.8 0 0 1-18.112 0L512 389.568V883.2a12.8 12.8 0 0 1-12.8 12.8h-38.4a12.8 12.8 0 0 1-12.8-12.8V389.312l-94.784 94.912a12.8 12.8 0 0 1-18.112 0L307.84 456.96a12.8 12.8 0 0 1 0-18.048l162.944-162.944a12.8 12.8 0 0 1 18.112 0zM819.2 128c7.04 0 12.8 5.76 12.8 12.8v38.4a12.8 12.8 0 0 1-12.8 12.8H140.8a12.8 12.8 0 0 1-12.8-12.8v-38.4c0-7.04 5.76-12.8 12.8-12.8h678.4z"></path></svg>
+                                                  </i>
+                                                  <!-- 固定在列尾 -->
+                                                  <i class="ix-icon ix-icon-vertical-align-top" 
+                                                     :class="col.fixed === 'right' && 'active'" 
+                                                     title="固定在列尾" 
+                                                     style="transform: rotate(180deg);" 
+                                                     @click="togglePin(col, 'right')">
+                                                    <svg viewBox="0 0 1024 1024" focusable="false" aria-hidden="true" data-icon="vertical-align-top"><path d="m488.96 276.032 162.88 162.944a12.8 12.8 0 0 1 0 18.048l-27.136 27.2a12.8 12.8 0 0 1-18.112 0L512 389.568V883.2a12.8 12.8 0 0 1-12.8 12.8h-38.4a12.8 12.8 0 0 1-12.8-12.8V389.312l-94.784 94.912a12.8 12.8 0 0 1-18.112 0L307.84 456.96a12.8 12.8 0 0 1 0-18.048l162.944-162.944a12.8 12.8 0 0 1 18.112 0zM819.2 128c7.04 0 12.8 5.76 12.8 12.8v38.4a12.8 12.8 0 0 1-12.8 12.8H140.8a12.8 12.8 0 0 1-12.8-12.8v-38.4c0-7.04 5.76-12.8 12.8-12.8h678.4z"></path></svg>
+                                                  </i>
+                                                </div>
+                                              </template>
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </template>
+                                      
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                </th>
+              </tr>
+            </thead>
+            <tbody class="ix-table-tbody">
+              <!-- 无数据占位 -->
+              <template x-if="paginatedData.length === 0">
+                <tr>
+                  <td :colspan="columns.filter(c => c.visible).length + 1" class="text-center py-8 text-text-mute text-xs">
+                    暂无符合条件的白名单数据
+                  </td>
+                </tr>
+              </template>
+      
+              <!-- 循环渲染行 -->
+              <template x-for="(row, index) in paginatedData" :key="row.id">
+                <tr class="hover:bg-bg-light transition-colors">
+                  <template x-for="col in columns.filter(c => c.visible)" :key="col.key">
+                    <td :class="{ 
+                          'ix-table-cell-align-center': col.key === 'selection' || col.key === 'serial',
+                          'ix-table-fix-start': col.fixed === 'left',
+                          'ix-table-fix-end': col.fixed === 'right'
+                        }"
+                        :style="col.fixed === 'left' ? { left: getLeftOffset(col) } : (col.fixed === 'right' ? { right: getRightOffset(col) } : {})">
+                      
+                      <!-- 多选框单元格 -->
+                      <template x-if="col.key === 'selection'">
+                        <span class="sd-checkbox" :class="selectedRows.includes(row.id) && 'sd-checkbox-checked'"
+                          @click="selectedRows.includes(row.id) ? selectedRows = selectedRows.filter(id => id !== row.id) : selectedRows.push(row.id)">
+                          <span class="sd-checkbox-inner"></span>
+                        </span>
+                      </template>
+                      
+                      <!-- 序号单元格 -->
+                      <template x-if="col.key === 'serial'">
+                        <span class="font-outfit" x-text="((currentPage - 1) * pageSize) + index + 1"></span>
+                      </template>
+                      
+                      <!-- 对象值 (含对象类型浅色标签展示 + 单行省略 + Monospace Hash 等) -->
+                      <template x-if="col.key === 'value'">
+                        <div class="flex items-center gap-2 max-w-full overflow-hidden min-w-0">
+                          <!-- 对象类型浅色标签 -->
+                          <span class="px-2 py-0.5 rounded-control text-xs font-normal flex-shrink-0 whitespace-nowrap"
+                            :class="{
+                                  'bg-[#1C6EFF]/10 text-[#1C6EFF]': row.type === '文件',
+                                  'bg-[#FA721B]/10 text-[#FA721B]': row.type === '文件签名',
+                                  'bg-[#0BA7B5]/10 text-[#0BA7B5]': row.type === '文件 Hash',
+                                  'bg-[#12A679]/10 text-[#12A679]': row.type === '进程',
+                                  'bg-[#C97F58]/10 text-[#C97F58]': row.type === 'IP / 域名'
+                                }" x-text="row.type">
+                          </span>
+                          <!-- 对象值文本 (单行省略 + 鼠标悬停 + 等宽字体) -->
+                          <span class="truncate select-all min-w-0 flex-1"
+                            :class="row.type === '文件 Hash' ? 'font-mono text-[11px] tracking-tight bg-bg-light px-1 rounded-sm' : 'text-xs'"
+                            :title="row.value" x-text="row.value">
+                          </span>
+                        </div>
+                      </template>
+      
+                      <!-- 描述 -->
+                      <template x-if="col.key === 'desc'">
+                        <span class="truncate block max-w-full" :title="row.desc || '--'"
+                          x-text="row.desc || '--'"></span>
+                      </template>
+      
+                      <!-- 启用状态 (Changeable Status Tag with dropdown toggle) -->
+                      <template x-if="col.key === 'status'">
+                        <div class="relative inline-block text-left" x-data="{ openStatus: false }"
+                          @click.outside="openStatus = false">
+                          <!-- 可变更标签按钮 -->
+                          <button @click="openStatus = !openStatus"
+                            class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-control text-xs font-normal border border-transparent transition-all select-none"
+                            :class="row.status ? 'bg-[#12A679]/10 text-[#12A679] hover:bg-[#12A679]/20' : 'bg-[#BEC3CC]/10 text-[#6F7785] hover:bg-[#BEC3CC]/20'">
+      
+                            <!-- 状态标志 -->
+                            <span class="flex items-center gap-1">
+                              <!-- 禁用时渲染特殊的禁用图标 -->
+                              <template x-if="!row.status">
+                                <svg class="w-3 h-3 text-[#6F7785] flex-shrink-0" fill="none" stroke="currentColor"
+                                  stroke-width="2" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                </svg>
+                              </template>
+                              <span x-text="row.status ? '启用' : '禁用'"></span>
+                            </span>
+                            <!-- 下拉小箭头 -->
+                            <svg class="w-2.5 h-2.5 opacity-60" fill="none" stroke="currentColor" stroke-width="2.5"
+                              viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+      
+                          <!-- 下拉快速切换面板 -->
+                          <div
+                            class="absolute left-0 mt-1 w-24 bg-white rounded-control shadow-[0_4px_16px_rgba(30,35,43,0.14)] z-30 py-1 border border-bg-line"
+                            x-show="openStatus" x-transition.opacity>
+                            <button @click="toggleRowStatus(row); openStatus = false"
+                              class="w-full text-left px-3 py-1.5 text-xs text-text hover:bg-bg-light transition-colors flex items-center gap-1.5">
+                              <span class="w-1.5 h-1.5 rounded-full"
+                                :class="row.status ? 'bg-text-mute' : 'bg-[#12A679]'"></span>
+                              <span x-text="row.status ? '禁用' : '启用'"></span>
+                            </button>
+                          </div>
+                        </div>
+                      </template>
+      
+                      <!-- 最近更新时间 -->
+                      <template x-if="col.key === 'updated_time'">
+                        <span class="font-outfit text-xs text-text-mute" x-text="row.updated_time"></span>
+                      </template>
+      
+                      <!-- 创建时间 -->
+                      <template x-if="col.key === 'created_time'">
+                        <span class="font-outfit text-xs text-text-mute" x-text="row.created_time"></span>
+                      </template>
+      
+                      <!-- 操作 (蓝色链接，编辑、删除) -->
+                      <template x-if="col.key === 'op'">
+                        <div class="flex items-center gap-4">
+                          <a class="action-link text-brand hover:text-brand-hover cursor-pointer"
+                            @click="openEditDrawer(row)">编辑</a>
+                          <a class="action-link text-[#F52727] hover:text-[#CF171D] cursor-pointer"
+                            @click="confirmDeleteRow(row.id)">删除</a>
+                        </div>
+                      </template>
+                      
+                    </td>
+                  </template>
+                  
+                  <!-- 最后一列配置占位单元格 (保持与表头宽度 40px 对齐) -->
+                  <td class="ix-table-fix-end" style="position: sticky; right: 0; width: 40px; z-index: 10;"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+          <!-- C. 分页区 (吸卡片底右侧，高度 40px，有顶部分割线) -->
+          <div
+            class="h-10 border-t border-bg-line flex items-center justify-between pt-2 mt-2 select-none flex-shrink-0">
+            <!-- 左侧总数统计 -->
+            <span class="text-xs text-text-mute">
+              显示 <span class="font-outfit" x-text="totalItems === 0 ? 0 : ((currentPage - 1) * pageSize) + 1"></span> 到
+              <span class="font-outfit" x-text="Math.min(currentPage * pageSize, totalItems)"></span> 条，
+              共 <span class="font-outfit" x-text="totalItems"></span> 条数据
+            </span>
+
+            <!-- 右侧分页器 -->
+            <div class="sd-pagination flex items-center gap-1.5">
+              <span class="text-xs text-text-mute mr-1">共 <span class="font-outfit" x-text="totalItems"></span> 项</span>
+
+              <!-- 上一页 -->
+              <button
+                class="sd-pagination-item text-xs w-6 h-6 flex items-center justify-center border border-border rounded-control"
+                :class="currentPage === 1 && 'opacity-50 cursor-not-allowed'" :disabled="currentPage === 1"
+                @click="currentPage--">
+                ❮
+              </button>
+
+              <!-- 页码生成 (静态简单版 + 点击机制) -->
+              <template x-for="p in Math.ceil(totalItems / pageSize) || 1">
+                <button class="w-6 h-6 text-xs flex items-center justify-center rounded-control transition-all"
+                  :class="currentPage === p ? 'bg-brand text-white rounded-full font-semibold cursor-default' : 'border border-border text-text hover:border-brand'"
+                  @click="currentPage = p" x-text="p">
+                </button>
+              </template>
+
+              <!-- 下一页 -->
+              <button
+                class="sd-pagination-item text-xs w-6 h-6 flex items-center justify-center border border-border rounded-control"
+                :class="currentPage === (Math.ceil(totalItems / pageSize) || 1) && 'opacity-50 cursor-not-allowed'"
+                :disabled="currentPage === (Math.ceil(totalItems / pageSize) || 1)" @click="currentPage++">
+                ❯
+              </button>
+
+              <!-- 前往页数 -->
+              <span class="text-xs text-text-mute ml-2">前往</span>
+              <div class="sd-pagination-jumper">
+                <input type="text" class="w-8 h-6 border border-border rounded-control text-center text-xs"
+                  :value="currentPage"
+                  @keypress.enter="const targetPage = parseInt($el.value); if(targetPage > 0 && targetPage <= Math.ceil(totalItems/pageSize)) { currentPage = targetPage; } else { $el.value = currentPage; }">
+              </div>
+              <span class="text-xs text-text-mute">页</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 安全策略页面内容 -->
+        <div x-show="currentMenu === 'security-policy'" class="flex-1 flex flex-col overflow-hidden">
+          <!-- A策略内容 -->
+          <div x-show="securityPolicyTab === 'A'"
+            class="flex-1 flex flex-col justify-center items-center text-text-mute text-xs gap-3"
+            data-sase-target="页面：安全策略A">
+            <div class="w-12 h-12 rounded-full bg-brand/10 text-brand flex items-center justify-center">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
+                </path>
+              </svg>
+            </div>
+            <span class="font-semibold text-text-title text-sm">A策略配置面板</span>
+            <span class="text-text-mute">包含网络准入、边界防御及终端加固的基本安全防护机制配置项。</span>
+            <div class="flex items-center gap-2 mt-2">
+              <button class="sd-btn sd-btn-primary px-4 text-xs h-8" @click="showToast('已启用A策略全部规则')">启用全套规则</button>
+              <button class="sd-btn sd-btn-default px-4 text-xs h-8" @click="showToast('导出A策略配置成功')">导出配置</button>
+            </div>
+          </div>
+
+          <!-- B策略内容 -->
+          <div x-show="securityPolicyTab === 'B'"
+            class="flex-1 flex flex-col justify-center items-center text-text-mute text-xs gap-3"
+            data-sase-target="页面：安全策略B">
+            <div class="w-12 h-12 rounded-full bg-[#12A679]/10 text-[#12A679] flex items-center justify-center">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                </path>
+              </svg>
+            </div>
+            <span class="font-semibold text-text-title text-sm">B策略防护面板</span>
+            <span class="text-text-mute">包含深度流量包检测、沙箱启发式联动以及进程级防勒索等高级检测逻辑。</span>
+            <div class="flex items-center gap-2 mt-2">
+              <button class="sd-btn sd-btn-primary px-4 text-xs h-8" @click="showToast('高级勒索防御已开启')">开启实时防御</button>
+              <button class="sd-btn sd-btn-default px-4 text-xs h-8" @click="showToast('正在分析策略状态')">健康度检查</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 临时占位：其他页面 -->
+        <div x-show="currentMenu !== 'whitelist' && currentMenu !== 'security-policy'"
+          class="flex-1 flex flex-col items-center justify-center text-text-mute text-xs gap-2 py-12">
+          <svg class="w-12 h-12 text-text-mute opacity-40" fill="none" stroke="currentColor" stroke-width="1.5"
+            viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M9.813 15.904L9 21m0 0l-.813-5.096M9 21h8.25m-8.25 0H3.75m11.25-3h.008v.008H15V18z"></path>
+          </svg>
+          <span class="font-semibold text-text-title text-sm">正在开发中...</span>
+          <span class="text-xs">此处为 <span x-text="currentMenu" class="font-mono"></span> 功能页面占位。</span>
+          <button class="sd-btn sd-btn-primary px-4 text-xs mt-3 h-8"
+            @click="currentMenu = 'whitelist'">返回白名单管理</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ========================================================
+       4. 弹出式抽屉 (Drawer) - 新增/编辑白名单项
+       ======================================================== -->
+    <!-- 遮罩 -->
+    <div class="drawer-overlay" x-show="showDrawer" x-transition.opacity @click="showDrawer = false"></div>
+
+    <!-- 抽屉内容 (宽度 800px, 右侧滑出) -->
+    <div class="sd-drawer sd-drawer-container" data-sase-target="抽屉：新增/编辑白名单"
+      :style="showDrawer ? 'transform: translateX(0)' : 'transform: translateX(100%)'">
+
+      <!-- 抽屉头部 (高度 48px, 无分割线) -->
+      <div class="sd-drawer-header h-12 px-4 flex items-center justify-between flex-shrink-0 select-none">
+        <span class="sd-drawer-title text-lg font-semibold text-text-title"
+          x-text="drawerMode === 'add' ? '新增白名单' : '编辑白名单'"></span>
+        <button class="cursor-pointer text-text-mute hover:text-text text-lg focus:outline-none"
+          @click="showDrawer = false">✕</button>
+      </div>
+
+      <!-- 抽屉表单内容区 (自适应滚动) -->
+      <div class="sd-drawer-body flex-1 overflow-y-auto px-8 py-0 custom-scrollbar">
+        <div class="sd-form sd-form--drawer space-y-4 py-4">
+
+          <!-- 表单项：对象类型 (Select) -->
+          <div class="sd-form-item flex items-start">
+            <div class="sd-form-item-label h-8 flex items-center">
+              <label class="text-xs text-text-mute font-normal flex items-center">
+                <span class="w-2.5 text-center text-risk mr-1 font-semibold flex-shrink-0">*</span>
+                <span>对象类型</span>
+              </label>
+            </div>
+            <div class="flex-1">
+              <select x-model="drawerData.type"
+                class="sd-input w-full h-8 px-2 text-xs outline-none focus:shadow-none bg-white border border-border rounded-control">
+                <option value="文件">文件</option>
+                <option value="文件签名">文件签名</option>
+                <option value="文件 Hash">文件 Hash</option>
+                <option value="进程">进程</option>
+                <option value="IP / 域名">IP / 域名</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 表单项：对象值 (Input) -->
+          <div class="sd-form-item flex items-start">
+            <div class="sd-form-item-label h-8 flex items-center">
+              <label class="text-xs text-text-mute font-normal flex items-center">
+                <span class="w-2.5 text-center text-risk mr-1 font-semibold flex-shrink-0">*</span>
+                <span>对象值</span>
+              </label>
+            </div>
+            <div class="flex-1">
+              <input type="text" x-model="drawerData.value"
+                class="sd-input w-full h-8 text-xs focus:shadow-none outline-none"
+                :class="drawerData.type === '文件 Hash' && 'font-mono text-[11px]'"
+                :placeholder="drawerData.type === '文件 Hash' ? '请输入MD5/SHA256哈希值' : (drawerData.type === 'IP / 域名' ? '例如 *.domain.com 或 IP/网段' : '请输入具体值')">
+            </div>
+          </div>
+
+          <!-- 表单项：描述 (Textarea) -->
+          <div class="sd-form-item flex items-start">
+            <div class="sd-form-item-label flex items-center mt-1.5">
+              <label class="text-xs text-text-mute font-normal flex items-center">
+                <span class="w-2.5 mr-1 flex-shrink-0"></span>
+                <span>描述信息</span>
+              </label>
+            </div>
+            <div class="flex-1">
+              <textarea x-model="drawerData.desc" rows="3"
+                class="sd-textarea w-full text-xs focus:shadow-none outline-none border border-border p-2 rounded-control"
+                placeholder="请输入描述备注信息"></textarea>
+            </div>
+          </div>
+
+          <!-- 表单项：启用状态 (Switch 开关) -->
+          <div class="sd-form-item flex items-start">
+            <div class="sd-form-item-label h-8 flex items-center">
+              <label class="text-xs text-text-mute font-normal flex items-center">
+                <span class="w-2.5 mr-1 flex-shrink-0"></span>
+                <span>是否启用</span>
+              </label>
+            </div>
+            <div class="flex-1 flex items-center h-8">
+              <!-- Switch 控件 -->
+              <button type="button" @click="drawerData.status = !drawerData.status"
+                class="relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                :class="drawerData.status ? 'bg-brand' : 'bg-gray-200'">
+                <span
+                  class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                  :class="drawerData.status ? 'translate-x-5' : 'translate-x-0'"></span>
+              </button>
+              <span class="ml-2 text-xs text-text-mute" x-text="drawerData.status ? '已启用' : '已禁用'"></span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 抽屉底部 (高度 56px, 左对齐，确定在左，取消在右) -->
+      <div
+        class="sd-drawer-footer h-14 px-4 border-t border-bg-line flex items-center justify-start gap-2 flex-shrink-0 select-none">
+        <button class="sd-btn sd-btn-primary px-6 text-md ml-4 h-8" @click="saveDrawerForm()">确定</button>
+        <button class="sd-btn sd-btn-default px-6 text-md h-8" @click="showDrawer = false">取消</button>
+      </div>
+
+    </div>
+
+    <!-- ========================================================
+       5. 弹出确认模态框 (Modal) - 删除确认
+       ======================================================== -->
+    <!-- 遮罩 -->
+    <div class="modal-overlay" x-show="showDeleteModal" x-transition.opacity @click="showDeleteModal = false"></div>
+
+    <!-- 弹窗容器 -->
+    <div class="modal-container" x-show="showDeleteModal"
+      x-transition:enter="transition ease-out duration-150 transform" x-transition:enter-start="opacity-0 scale-95"
+      x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-100 transform"
+      x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95">
+
+      <!-- 头部 -->
+      <div class="h-12 px-6 flex items-center justify-between flex-shrink-0 select-none">
+        <span class="text-[14px] font-semibold text-text-title">删除确认</span>
+        <button class="cursor-pointer text-text-mute hover:text-text text-md focus:outline-none"
+          @click="showDeleteModal = false">✕</button>
+      </div>
+
+      <!-- 内容区 -->
+      <div class="px-6 py-4 text-xs text-text">
+        <div class="flex items-start gap-3">
+          <span class="text-risk text-lg">⚠</span>
+          <div class="flex-1 mt-0.5">
+            <template x-if="deleteTarget === 'batch'">
+              <span>确定要删除选中的 <strong class="font-semibold text-risk" x-text="selectedRows.length"></strong>
+                项白名单规则吗？</span>
+            </template>
+            <template x-if="deleteTarget !== 'batch'">
+              <span>确定要删除该条白名单规则吗？</span>
+            </template>
+            <p class="text-text-mute mt-1">此操作为危险操作，删除后数据将无法恢复！</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 底部 (高度 56px, 右对齐, 确定在左, 取消在右) -->
+      <div
+        class="h-14 px-6 flex items-center justify-end gap-2 flex-shrink-0 bg-bg-light border-t border-bg-line rounded-b-[4px]">
+        <button class="sd-btn sd-btn-primary px-4 text-xs h-8" @click="executeDelete()">确定</button>
+        <button class="sd-btn sd-btn-default px-4 text-xs h-8" @click="showDeleteModal = false">取消</button>
+      </div>
+
+    </div>
+
+    <!-- ========================================================
+       6. 全局 Toast 提示通知 (吸顶, 居中)
+       ======================================================== -->
+    <div class="toast-box text-xs font-normal" x-show="toast.show" x-transition.opacity>
+      <!-- 状态图标 -->
+      <template x-if="toast.type === 'success'">
+        <span class="text-[#12A679]">✔</span>
+      </template>
+      <template x-if="toast.type === 'error'">
+        <span class="text-risk">✕</span>
+      </template>
+      <span class="text-text" x-text="toast.message"></span>
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+  
+
+<!-- SASE Annotation Kit Start -->
+<script>
+class SaseAnnotationPanel extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+    
+    this.state = {
+      filePath: this.getAttribute('file-path') || window.location.pathname,
+      scene: this.getAttribute('scene') || 'default',
+      isSidebarOpen: false,
+      activeTab: 'spec',
+      showAnnotateMode: true,
+      isPlacingDot: false,
+      comments: [],
+      editingId: null,
+      localMouseX: 0,
+      localMouseY: 0,
+      tempXPercent: 0,
+      tempYPercent: 0,
+      showAddModal: false,
+      newCommentTitle: '',
+      newCommentContent: '',
+      newCommentImage: '',
+      toastMsg: '',
+      localTimestamp: Date.now()
+    };
+    
+    this.isRendered = false;
+  }
+
+  connectedCallback() {
+    // 数据块 <script id="sase-annotations"> 在 HTML 中位于本元素之后，
+    // 必须等待整个 DOM 解析完毕再读取，否则 querySelectorAll 找不到它
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        this.initData();
+        this.render();
+        this.setupObserver();
+      });
+    } else {
+      // DOM 已完全加载（例如动态插入场景）
+      this.initData();
+      this.render();
+      this.setupObserver();
+    }
+  }
+
+  setupObserver() {
+    if (this.observer) return;
+    this.observer = new MutationObserver(() => {
+      if (this.state.showAnnotateMode) {
+        this.updateDots();
+        // 增加 300ms 延时检查，处理 CSS transform 过渡动画（如抽屉滑出视口）
+        setTimeout(() => {
+          if (this.state.showAnnotateMode) this.updateDots();
+        }, 300);
+      }
+    });
+    this.observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+  }
+
+  storageKey() {
+    return 'annotations::' + this.state.filePath;
+  }
+
+  getUniqueSelector(el) {
+    if (!el || el === document.body) return 'body';
+    if (el.hasAttribute('data-sase-target')) return `[data-sase-target="${el.getAttribute('data-sase-target')}"]`;
+    if (el.id) return `#${el.id}`;
+    
+    let path = [];
+    let current = el;
+    while (current && current !== document.body) {
+      if (current.id) {
+        path.unshift(`#${current.id}`);
+        break;
+      }
+      let selector = current.tagName.toLowerCase();
+      let sib = current, nth = 1;
+      while (sib = sib.previousElementSibling) nth++;
+      selector += `:nth-child(${nth})`;
+      path.unshift(selector);
+      current = current.parentElement;
+    }
+    return 'body > ' + path.join(' > ');
+  }
+
+  findClosestContainer(el) {
+    let current = el;
+    while (current && current !== document.body) {
+      if (current.hasAttribute('data-sase-target')) return current;
+      const style = window.getComputedStyle(current);
+      if (style.position === 'fixed' || style.position === 'absolute') {
+        if (current.offsetWidth > 50 && current.offsetHeight > 50) return current;
+      }
+      if (current.hasAttribute('x-show') || current.hasAttribute('v-show') || current.hasAttribute('v-if')) {
+        return current;
+      }
+      if (typeof current.className === 'string' && /(modal|drawer|dialog|popup|page|tab-pane|content-viewport)/i.test(current.className)) {
+        return current;
+      }
+      current = current.parentElement;
+    }
+    return document.body;
+  }
+
+  getContainerName(el) {
+    const docTitle = document.title || '当前页面';
+    if (el === document.body) return docTitle;
+    if (el.hasAttribute('data-sase-target')) return el.getAttribute('data-sase-target');
+    
+    const heading = el.querySelector('h1, h2, h3, h4, h5, .title, .header');
+    if (heading && heading.innerText) {
+      let text = heading.innerText.trim().split('\n')[0];
+      if (text.length > 20) text = text.substring(0, 20) + '...';
+      if (text) return text;
+    }
+    
+    const cls = typeof el.className === 'string' ? el.className.toLowerCase() : '';
+    if (cls.includes('drawer')) return '侧边抽屉';
+    if (cls.includes('modal') || cls.includes('dialog')) return '弹窗面板';
+    if (cls.includes('page') || cls.includes('viewport')) return '局部页面';
+    if (el.hasAttribute('x-show') || el.hasAttribute('v-show') || el.hasAttribute('v-if')) return '切换面板';
+    
+    return docTitle + ' (局部区域)';
+  }
+
+  isTargetVisible(item) {
+    let selector = item.selector;
+    if (!selector) {
+      if (!item.scene || item.scene === 'global' || item.scene === 'default' || item.scene === '全局默认页面') return true;
+      selector = `[data-sase-target="${item.scene}"]`;
+    }
+    if (selector === 'body') return true;
+    
+    let el;
+    try {
+      el = document.querySelector(selector);
+    } catch(e) { return false; }
+    
+    if (!el) return false;
+    
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return false;
+    const style = window.getComputedStyle(el);
+    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+    
+    const vw = window.innerWidth || document.documentElement.clientWidth;
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    if (rect.right <= 1 || rect.left >= vw - 1 || rect.bottom <= 1 || rect.top >= vh - 1) {
+      return false;
+    }
+    
+    return true;
+  }
+
+  getFilteredComments() {
+    return this.state.comments.filter(c => this.isTargetVisible(c));
+  }
+
+  initData() {
+    try {
+      const raw = localStorage.getItem(this.storageKey());
+      let localData = { timestamp: 0, comments: [] };
+      if (raw !== null) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) localData = { timestamp: 0, comments: parsed };
+        else if (parsed && parsed.comments) localData = parsed;
+      }
+
+      // Try to load from the inline script block (new approach for HTML)
+      let fileData = null;
+      const scriptBlocks = document.querySelectorAll('#sase-annotations');
+      if (scriptBlocks && scriptBlocks.length > 0) {
+        for (const block of scriptBlocks) {
+          try {
+            const parsed = JSON.parse(block.textContent);
+            if (parsed && typeof parsed.timestamp === 'number') {
+              if (!fileData || parsed.timestamp > fileData.timestamp) {
+                fileData = parsed;
+              }
+            }
+          } catch (e) { }
+        }
+      }
+
+      if (fileData && fileData.timestamp > localData.timestamp) {
+        this.state.comments = fileData.comments;
+        this.state.localTimestamp = fileData.timestamp;
+        localStorage.setItem(this.storageKey(), JSON.stringify(fileData));
+      } else if (localData.comments.length > 0 || raw !== null) {
+        this.state.comments = localData.comments;
+        this.state.localTimestamp = localData.timestamp;
+      } else if (fileData) {
+        this.state.comments = fileData.comments;
+        this.state.localTimestamp = fileData.timestamp;
+      }
+    } catch (e) {
+      this.state.comments = [];
+    }
+  }
+
+  persist() {
+    this.state.localTimestamp = Date.now();
+    const data = { timestamp: this.state.localTimestamp, comments: this.state.comments };
+    localStorage.setItem(this.storageKey(), JSON.stringify(data));
+  }
+
+  showToast(msg) {
+    this.state.toastMsg = msg;
+    this.updateToast();
+    setTimeout(() => {
+      this.state.toastMsg = '';
+      this.updateToast();
+    }, 3500);
+  }
+
+  getExportCodeString() {
+    const obj = { 
+      timestamp: this.state.localTimestamp + 1, 
+      comments: this.state.comments 
+    };
+    return JSON.stringify(obj, null, 2);
+  }
+
+  copyAndSaveSource() {
+    // Generate the script block
+    const codeBlock = `<script id="sase-` + `annotations" type="application/json">\n${this.getExportCodeString()}\n<\/script>`;
+    const textarea = document.createElement('textarea');
+    textarea.value = codeBlock;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    this.showToast('💾 成功！完整数据已复制，请替换或粘贴至您的 .html 文件最底部！');
+  }
+
+  copyAsMarkdown() {
+    if (this.state.comments.length === 0) {
+      this.showToast('⚠️ 暂无批注内容可复制');
+      return;
+    }
+    const lines = ['# 交互说明批注\n'];
+    this.state.comments.forEach((item, index) => {
+      lines.push(`## ${index + 1}. ${item.title}`);
+      lines.push(`> **场景**: ${item.scene || '默认页面'} | **坐标**: (${item.xPercent.toFixed(1)}%, ${item.yPercent.toFixed(1)}%)\n`);
+      lines.push(item.content);
+      if (item.image) {
+        lines.push(`\n![截图](${item.image})\n`);
+      }
+      lines.push('\n---\n');
+    });
+    const mdText = lines.join('\n');
+    const textarea = document.createElement('textarea');
+    textarea.value = mdText;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    this.showToast('📝 Markdown 批注文档已复制到剪贴板！');
+  }
+
+  render() {
+    if (!this.isRendered) {
+      this.shadowRoot.innerHTML = `
+        <style>
+          
+/* =====================================================
+   LIVE DEV AGENT - Annotation Panel Styles
+   All rules are namespaced under .sase-live-agent
+   to avoid conflicts with host application styles.
+   ===================================================== */
+
+:host {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999999;
+}
+
+.sase-live-agent {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Overlay mask for placement mode */
+.sase-live-agent .lda-overlay-mask {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(30, 27, 75, 0.1);
+  backdrop-filter: blur(1px);
+  -webkit-backdrop-filter: blur(1px);
+  z-index: 999998;
+  cursor: crosshair;
+  user-select: none;
+  pointer-events: auto;
+}
+
+.sase-live-agent .lda-crosshair-tooltip {
+  position: absolute;
+  background-color: #4f46e5;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  border: 1px solid #818cf8;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.sase-live-agent .lda-ping-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #34d399;
+  animation: lda-ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes lda-ping {
+  75%, 100% { transform: scale(2); opacity: 0; }
+}
+
+.sase-live-agent .lda-coord-text {
+  font-size: 9px;
+  color: #c7d2fe;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Dots layer */
+.sase-live-agent .lda-dots-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999997;
+}
+
+.sase-live-agent .lda-dot-wrapper {
+  position: absolute;
+  pointer-events: auto;
+}
+
+.sase-live-agent .lda-dot-group {
+  position: relative;
+  transform: translate(-50%, -50%);
+}
+
+.sase-live-agent .lda-dot-bubble {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: white;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  border: 2px solid white;
+  transition: all 0.2s;
+  background-color: #4f46e5;
+  animation: lda-radar-pulse 2s infinite;
+}
+
+.sase-live-agent .lda-dot-bubble:hover {
+  transform: scale(1.15);
+  background-color: #4338ca;
+}
+
+@keyframes lda-radar-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.6); }
+  70% { box-shadow: 0 0 0 8px rgba(79, 70, 229, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+}
+
+.sase-live-agent .lda-dot-card {
+  position: absolute;
+  left: 32px;
+  top: 50%;
+  transform: translateY(-50%) scale(0.95);
+  width: 320px;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  padding: 16px;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.15s ease-out;
+  color: #1e293b;
+  text-align: left;
+}
+
+.sase-live-agent .lda-dot-group:hover .lda-dot-card {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-50%) scale(1);
+}
+
+.sase-live-agent .lda-dot-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+
+.sase-live-agent .lda-dot-card-title {
+  font-weight: 700;
+  color: #1e293b;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sase-live-agent .lda-dot-indicator {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #4f46e5;
+}
+
+.sase-live-agent .lda-btn-delete {
+  color: #f43f5e;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+.sase-live-agent .lda-btn-delete:hover { background-color: #fff1f2; color: #be123c; }
+
+.sase-live-agent .lda-dot-card-desc {
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.6;
+  white-space: pre-line;
+  margin: 0;
+}
+
+.sase-live-agent .lda-dot-card-footer {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #94a3b8;
+  font-family: monospace;
+}
+
+.sase-live-agent .lda-badge {
+  background-color: #eef2ff;
+  color: #4f46e5;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: sans-serif;
+}
+
+/* Toast */
+.sase-live-agent .lda-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 24px;
+  z-index: 100000;
+  background-color: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(4px);
+  border: 1px solid #1e293b;
+  color: #f1f5f9;
+  padding: 10px 16px;
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  pointer-events: none;
+  animation: lda-bounce 1s infinite;
+}
+
+@keyframes lda-bounce {
+  0%, 100% { transform: translateY(-4px); animation-timing-function: cubic-bezier(0.8,0,1,1); }
+  50% { transform: none; animation-timing-function: cubic-bezier(0,0,0.2,1); }
+}
+
+/* Capsule */
+.sase-live-agent .lda-capsule {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 999998;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 7px 14px;
+  border-radius: 9999px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 0 15px rgba(224, 231, 255, 0.5);
+  height: 36px;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+.sase-live-agent .lda-capsule-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 12px;
+  border-right: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.sase-live-agent .lda-capsule-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  user-select: none;
+}
+
+.sase-live-agent .lda-switch {
+  width: 28px;
+  height: 16px;
+  border-radius: 9999px;
+  background-color: #e2e8f0;
+  position: relative;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  padding: 0;
+  pointer-events: auto;
+}
+.sase-live-agent .lda-switch-on { background-color: #4f46e5; }
+
+.sase-live-agent .lda-switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: white;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+.sase-live-agent .lda-switch-knob-on { transform: translateX(12px); }
+
+.sase-live-agent .lda-capsule-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 800;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s;
+  padding: 0;
+  pointer-events: auto;
+}
+.sase-live-agent .lda-capsule-btn:hover { color: #4f46e5; }
+.sase-live-agent .lda-capsule-btn-sep { padding-right: 12px; border-right: 1px solid rgba(226, 232, 240, 0.8); }
+
+.sase-live-agent .lda-capsule-icon { font-size: 12px; transition: transform 0.3s; }
+.sase-live-agent .lda-icon-rotate { transform: rotate(45deg); color: #4f46e5; }
+
+.sase-live-agent .lda-count-badge {
+  background-color: #eef2ff;
+  color: #4338ca;
+  font-weight: 700;
+  border-radius: 9999px;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  border: 1px solid #e0e7ff;
+  user-select: none;
+}
+
+/* Control Panel Sidebar */
+.sase-live-agent .lda-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999998;
+  background: transparent;
+  pointer-events: auto;
+}
+
+.sase-live-agent .lda-panel {
+  position: fixed;
+  top: 16px;
+  bottom: 16px;
+  right: -430px;
+  width: 410px;
+  background-color: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.1);
+  color: #1e293b;
+  z-index: 999999;
+  transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  pointer-events: auto;
+}
+.sase-live-agent .lda-panel-open { right: 16px; }
+
+.sase-live-agent .lda-panel-header {
+  padding: 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.sase-live-agent .lda-agent-title { color: #4f46e5; font-weight: 700; font-size: 14px; }
+.sase-live-agent .lda-agent-tag {
+  background-color: #eef2ff; color: #4338ca; font-size: 10px;
+  font-weight: 800; padding: 2px 8px; border-radius: 4px; border: 1px solid #c7d2fe;
+}
+
+.sase-live-agent .lda-btn-primary {
+  padding: 6px 16px; background-color: #059669; color: white; font-size: 11px;
+  font-weight: 800; border-radius: 8px; display: flex; align-items: center; gap: 6px;
+  border: 1px solid #10b981; box-shadow: 0 10px 15px -3px rgba(5,150,105,0.2);
+  cursor: pointer; transition: all 0.2s; white-space: nowrap;
+}
+.sase-live-agent .lda-btn-primary:hover { background-color: #047857; }
+.sase-live-agent .lda-btn-primary:active { transform: scale(0.95); }
+
+.sase-live-agent .lda-tabs {
+  display: flex;
+  border-bottom: 1px solid #e2e8f0;
+  background-color: #f1f5f9;
+  flex-shrink: 0;
+}
+
+.sase-live-agent .lda-tab-btn {
+  flex: 1; padding: 12px 0; text-align: center; font-size: 12px; font-weight: 700;
+  background: transparent; border: none; border-bottom: 2px solid transparent;
+  color: #64748b; cursor: pointer; transition: all 0.2s;
+}
+.sase-live-agent .lda-tab-btn:hover { color: #334155; background-color: rgba(226,232,240,0.5); }
+.sase-live-agent .lda-tab-active { border-bottom-color: #4f46e5; color: #4338ca; background-color: white; }
+
+.sase-live-agent .lda-panel-content {
+  flex: 1; overflow-y: auto; padding: 20px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.sase-live-agent .lda-panel-content::-webkit-scrollbar { width: 4px; }
+.sase-live-agent .lda-panel-content::-webkit-scrollbar-track { background: transparent; }
+.sase-live-agent .lda-panel-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+.sase-live-agent .lda-btn-block {
+  width: 100%; padding: 12px; background-color: #4f46e5; color: white; font-weight: 700;
+  font-size: 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  gap: 8px; border: 1px solid #6366f1; box-shadow: 0 10px 15px -3px rgba(49,46,129,0.3);
+  cursor: pointer; transition: all 0.2s;
+}
+.sase-live-agent .lda-btn-block:hover { background-color: #4338ca; }
+.sase-live-agent .lda-btn-block:active { transform: scale(0.99); }
+
+.sase-live-agent .lda-list-header {
+  display: flex; justify-content: space-between; align-items: center; padding: 0 4px;
+  font-size: 12px; font-weight: 700; color: #475569;
+}
+
+.sase-live-agent .lda-text-btn {
+  font-size: 10px; color: #4f46e5; font-weight: 600; background: transparent;
+  border: none; cursor: pointer; display: flex; align-items: center; gap: 4px;
+}
+.sase-live-agent .lda-text-btn:hover { color: #4338ca; }
+
+.sase-live-agent .lda-empty-state {
+  text-align: center; padding: 32px 0; color: #64748b; font-size: 12px;
+  border: 1px dashed #cbd5e1; border-radius: 12px;
+}
+
+.sase-live-agent .lda-list-item {
+  background-color: white; border: 1px solid #e2e8f0; border-radius: 12px;
+  padding: 14px; display: flex; flex-direction: column; gap: 10px; transition: border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+.sase-live-agent .lda-list-item:hover { border-color: #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+.sase-live-agent .lda-list-item:hover .lda-btn-del-hover { opacity: 1; }
+
+.sase-live-agent .lda-list-item-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.sase-live-agent .lda-list-index {
+  width: 20px; height: 20px; border-radius: 50%;
+  background-color: #eef2ff; border: 1px solid #c7d2fe;
+  color: #4f46e5; font-weight: 900; display: flex; align-items: center; justify-content: center; font-size: 10px;
+}
+.sase-live-agent .lda-list-item-header h4 { margin: 0; font-weight: 700; color: #1e293b; font-size: 12px; }
+.sase-live-agent .lda-btn-del-hover {
+  color: #f43f5e; font-size: 10px; font-weight: 700; opacity: 0; transition: opacity 0.2s;
+  background: transparent; border: none; cursor: pointer;
+}
+.sase-live-agent .lda-btn-del-hover:hover { color: #fb7185; }
+.sase-live-agent .lda-list-item-desc { margin: 0; font-size: 11px; color: #475569; line-height: 1.6; white-space: pre-line; }
+.sase-live-agent .lda-list-item-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 9px; color: #64748b; font-family: monospace;
+  border-top: 1px solid #f1f5f9; padding-top: 8px;
+}
+.sase-live-agent .lda-item-coord-badge {
+  background-color: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;
+  padding: 2px 6px; border-radius: 4px; font-family: sans-serif;
+}
+
+.sase-live-agent .lda-scene-tag {
+  font-size: 10px; font-weight: 700; color: #059669;
+  background-color: #ecfdf5; border: 1px solid #a7f3d0;
+  padding: 2px 8px; border-radius: 4px; max-width: 180px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.sase-live-agent .lda-list-item-current {
+  border-color: #a5b4fc !important;
+  background-color: #eef2ff !important;
+}
+.sase-live-agent .lda-list-item-current::before {
+  content: '当前页';
+  position: absolute; right: 12px; top: 10px;
+  font-size: 9px; font-weight: 800; color: #4f46e5;
+  background-color: white; border: 1px solid #c7d2fe;
+  padding: 1px 6px; border-radius: 4px;
+}
+
+.sase-live-agent .lda-rule-alert {
+  background-color: rgba(30,27,75,0.5); border: 1px solid rgba(49,46,129,0.5);
+  padding: 14px; border-radius: 12px;
+}
+.sase-live-agent .lda-rule-alert h4 { margin: 0 0 6px 0; font-size: 12px; font-weight: 700; color: #a5b4fc; display: flex; align-items: center; gap: 6px; }
+.sase-live-agent .lda-rule-alert p { margin: 0; font-size: 10px; color: #94a3b8; line-height: 1.6; }
+
+.sase-live-agent .lda-rule-card { background-color: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.sase-live-agent .lda-rule-card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 8px; }
+.sase-live-agent .lda-rule-name { font-weight: 700; color: #818cf8; font-size: 12px; font-family: monospace; }
+.sase-live-agent .lda-rule-tag { font-size: 9px; color: #64748b; background-color: #020617; padding: 2px 8px; border-radius: 4px; border: 1px solid #1e293b; }
+.sase-live-agent .lda-rule-cases { display: flex; flex-direction: column; gap: 8px; }
+.sase-live-agent .lda-rule-case-title { font-size: 10px; font-weight: 700; color: #94a3b8; }
+.sase-live-agent .lda-rule-cases ul { margin: 0; padding-left: 16px; font-size: 10px; color: #64748b; line-height: 1.6; font-family: sans-serif; }
+.sase-live-agent .lda-rule-cases li { margin-bottom: 4px; }
+
+.sase-live-agent .lda-live-tag { font-size: 9px; background-color: #f8fafc; border: 1px solid #e2e8f0; color: #059669; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: 700; }
+.sase-live-agent .lda-help-text { font-size: 10px; color: #64748b; line-height: 1.6; margin: 0; }
+.sase-live-agent .lda-code-preview { background-color: #f8fafc; border-radius: 12px; padding: 14px; border: 1px solid #e2e8f0; position: relative; overflow-x: auto; }
+.sase-live-agent .lda-code-tag { position: absolute; right: 12px; top: 12px; font-size: 9px; background-color: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px; user-select: none; }
+.sase-live-agent .lda-code-preview pre { margin: 0; font-family: monospace; font-size: 10px; color: #0f172a; white-space: pre-wrap; }
+
+/* Modal */
+.sase-live-agent .lda-modal-mask {
+  position: fixed; inset: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  z-index: 1000000;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: auto;
+}
+
+.sase-live-agent .lda-modal {
+  background-color: white; border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+  border: 1px solid #f1f5f9; padding: 24px;
+  width: 100%; max-width: 448px;
+  animation: lda-zoomIn 0.2s ease-out;
+}
+
+@keyframes lda-zoomIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.sase-live-agent .lda-modal-header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.sase-live-agent .lda-modal-index { width: 24px; height: 24px; border-radius: 50%; background-color: #4f46e5; color: white; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+.sase-live-agent .lda-modal-header h3 { margin: 0; font-weight: 900; color: #1e293b; font-size: 16px; }
+
+.sase-live-agent .lda-modal-coords {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  font-size: 10px; font-family: monospace; color: #94a3b8;
+  background-color: #f8fafc; padding: 10px; border-radius: 8px;
+  border: 1px solid #f1f5f9; margin-bottom: 16px;
+}
+.sase-live-agent .lda-modal-coords span { color: #4f46e5; font-weight: 700; }
+
+.sase-live-agent .lda-form-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
+.sase-live-agent .lda-form-group label { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+.sase-live-agent .lda-form-group input,
+.sase-live-agent .lda-form-group textarea {
+  width: 100%; box-sizing: border-box; font-size: 12px; border: 1px solid #e2e8f0;
+  border-radius: 8px; padding: 10px 12px; outline: none; transition: box-shadow 0.2s;
+  font-family: inherit; color: #1e293b;
+}
+.sase-live-agent .lda-form-group input:focus,
+.sase-live-agent .lda-form-group textarea:focus { border-color: #4f46e5; box-shadow: 0 0 0 2px rgba(79,70,229,0.2); }
+
+.sase-live-agent .lda-modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+.sase-live-agent .lda-btn-cancel { padding: 10px 16px; font-size: 12px; font-weight: 700; color: #64748b; background-color: #f1f5f9; border-radius: 8px; transition: background-color 0.2s; border: none; cursor: pointer; }
+.sase-live-agent .lda-btn-cancel:hover { background-color: #e2e8f0; }
+.sase-live-agent .lda-btn-submit { padding: 10px 16px; font-size: 12px; font-weight: 700; color: white; background-color: #4f46e5; border-radius: 8px; transition: background-color 0.2s; border: none; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(199,210,254,0.5); }
+.sase-live-agent .lda-btn-submit:hover { background-color: #4338ca; }
+
+/* Image upload and dropzone */
+.sase-live-agent .lda-image-dropzone {
+  border: 1px dashed #475569;
+  background-color: rgba(30, 41, 59, 0.5);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  margin-top: 4px;
+}
+.sase-live-agent .lda-image-dropzone:hover {
+  border-color: #6366f1;
+  background-color: rgba(30, 41, 59, 0.8);
+}
+.sase-live-agent .lda-image-placeholder {
+  font-size: 11px;
+  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+.sase-live-agent .lda-image-preview-wrapper {
+  position: relative;
+  width: 100%;
+  max-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #090d16;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #1e293b;
+}
+.sase-live-agent .lda-image-preview {
+  max-width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+}
+.sase-live-agent .lda-btn-remove-image {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: rgba(244, 63, 94, 0.9);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+.sase-live-agent .lda-btn-remove-image:hover {
+  background-color: #be123c;
+}
+
+/* Media support for dots and lists */
+.sase-live-agent .lda-dot-card-media {
+  margin-top: 8px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  background-color: #f8fafc;
+}
+.sase-live-agent .lda-dot-card-media img {
+  display: block;
+  width: 100%;
+  max-height: 160px;
+  object-fit: contain;
+}
+
+.sase-live-agent .lda-list-item-media {
+  margin-top: 8px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+}
+.sase-live-agent .lda-list-item-media img {
+  display: block;
+  width: 100%;
+  max-height: 120px;
+  object-fit: contain;
+}
+
+        </style>
+        <div class="sase-live-agent">
+          <div id="mask-layer"></div>
+          <div id="dots-layer"></div>
+          <div id="toast-layer"></div>
+          <div id="capsule-layer"></div>
+          <div id="sidebar-layer"></div>
+          <div id="modal-layer"></div>
+        </div>
+      `;
+      this.isRendered = true;
+    }
+    this.update();
+  }
+
+  update() {
+    this.updateMask();
+    this.updateDots();
+    this.updateToast();
+    this.updateCapsule();
+    this.updateSidebar();
+    this.updateModal();
+  }
+
+  updateMask() {
+    const layer = this.shadowRoot.getElementById('mask-layer');
+    if (!this.state.isPlacingDot) {
+      layer.innerHTML = '';
+      layer.onclick = null;
+      layer.onmousemove = null;
+      return;
+    }
+    layer.innerHTML = `
+      <div class="lda-overlay-mask">
+        <div class="lda-crosshair-tooltip" style="left: ${this.state.localMouseX + 15}px; top: ${this.state.localMouseY + 15}px;">
+          <div style="display:flex;align-items:center;gap:4px;">
+            <span class="lda-ping-dot"></span>
+            <span>在目标位置点击打点 📍</span>
+          </div>
+          <span class="lda-coord-text">百分比坐标: X: ${this.state.tempXPercent.toFixed(1)}% , Y: ${this.state.tempYPercent.toFixed(1)}%</span>
+        </div>
+      </div>
+    `;
+    const mask = layer.querySelector('.lda-overlay-mask');
+    mask.onclick = (e) => {
+      mask.style.pointerEvents = 'none';
+      const clickedEl = document.elementFromPoint(e.clientX, e.clientY);
+      mask.style.pointerEvents = 'auto';
+      
+      let selector = 'body';
+      let sceneName = '全局默认页面';
+      if (clickedEl) {
+        const container = this.findClosestContainer(clickedEl);
+        selector = this.getUniqueSelector(container);
+        sceneName = this.getContainerName(container);
+      }
+      this.state.tempSelector = selector;
+      this.state.tempSceneName = sceneName;
+      this.state.scene = sceneName; // for legacy UI usage
+      
+      this.state.isPlacingDot = false;
+      this.state.editingId = null;
+      this.state.newCommentTitle = '';
+      this.state.newCommentContent = '';
+      this.state.showAddModal = true;
+      this.update();
+    };
+    mask.onmousemove = (e) => {
+      const rect = this.getBoundingClientRect();
+      const relativeX = e.clientX - rect.left;
+      const relativeY = e.clientY - rect.top;
+      this.state.localMouseX = relativeX;
+      this.state.localMouseY = relativeY;
+      this.state.tempXPercent = Math.max(0, Math.min(100, (relativeX / rect.width) * 100));
+      this.state.tempYPercent = Math.max(0, Math.min(100, (relativeY / rect.height) * 100));
+      this.updateMask(); // Only update mask to avoid full re-render lag
+    };
+  }
+
+  updateDots() {
+    const layer = this.shadowRoot.getElementById('dots-layer');
+    if (!this.state.showAnnotateMode) {
+      layer.innerHTML = '';
+      return;
+    }
+    const filtered = this.getFilteredComments();
+    let html = '<div class="lda-dots-layer">';
+    filtered.forEach((item) => {
+      const globalIndex = this.state.comments.findIndex(c => c.id === item.id) + 1;
+      html += `
+        <div class="lda-dot-wrapper" style="left: ${item.xPercent}%; top: ${item.yPercent}%">
+          <div class="lda-dot-group">
+            <div class="lda-dot-bubble" data-id="${item.id}">${globalIndex}</div>
+            <div class="lda-dot-card">
+              <div class="lda-dot-card-header">
+                <span class="lda-dot-card-title"><span class="lda-dot-indicator"></span> ${globalIndex}. ${item.title}</span>
+                <button class="lda-btn-delete" data-id="${item.id}">删除</button>
+              </div>
+              <p class="lda-dot-card-desc">${item.content}</p>
+              ${item.image ? `
+                <div class="lda-dot-card-media">
+                  <img src="${item.image}" alt="截图说明" />
+                </div>
+              ` : ''}
+              <div class="lda-dot-card-footer">
+                <span>坐标比: (${item.xPercent.toFixed(1)}%, ${item.yPercent.toFixed(1)}%)</span>
+                <span class="lda-badge">标号: #${item.id}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+    layer.innerHTML = html;
+
+    // Attach events
+    layer.querySelectorAll('.lda-dot-bubble').forEach(el => {
+      el.onclick = (e) => {
+        e.stopPropagation();
+        const item = filtered.find(c => c.id === parseInt(el.getAttribute('data-id')));
+        if(item) {
+          this.state.editingId = item.id;
+          this.state.newCommentTitle = item.title;
+          this.state.newCommentContent = item.content;
+          this.state.newCommentImage = item.image || '';
+          this.state.tempXPercent = item.xPercent;
+          this.state.tempYPercent = item.yPercent;
+          this.state.showAddModal = true;
+          this.update();
+        }
+      };
+    });
+    layer.querySelectorAll('.lda-btn-delete').forEach(el => {
+      el.onclick = (e) => {
+        e.stopPropagation();
+        const id = parseInt(el.getAttribute('data-id'));
+        const idx = this.state.comments.findIndex(c => c.id === id);
+        if (idx !== -1) {
+          this.state.comments.splice(idx, 1);
+          this.persist();
+          this.showToast('批注已删除');
+          this.update();
+        }
+      };
+    });
+  }
+
+  updateToast() {
+    const layer = this.shadowRoot.getElementById('toast-layer');
+    if (this.state.toastMsg) {
+      layer.innerHTML = `<div class="lda-toast"><span>⚡</span><span>${this.state.toastMsg}</span></div>`;
+    } else {
+      layer.innerHTML = '';
+    }
+  }
+
+  updateCapsule() {
+    const layer = this.shadowRoot.getElementById('capsule-layer');
+    layer.innerHTML = `
+      <div class="lda-capsule">
+        <div class="lda-capsule-section">
+          <span class="lda-capsule-label">说明</span>
+          <button class="lda-switch ${this.state.showAnnotateMode ? 'lda-switch-on' : ''}" id="btn-toggle-ann">
+            <span class="lda-switch-knob ${this.state.showAnnotateMode ? 'lda-switch-knob-on' : ''}"></span>
+          </button>
+        </div>
+        <button class="lda-capsule-btn lda-capsule-btn-sep" id="btn-place-dot"><span>📍 打点</span></button>
+        <button class="lda-capsule-btn" id="btn-toggle-sidebar">
+          <span class="lda-capsule-icon ${this.state.isSidebarOpen ? 'lda-icon-rotate' : ''}">🛠️</span>
+          <span>${this.state.isSidebarOpen ? '收起' : '控制台'}</span>
+          <span class="lda-count-badge">${this.state.comments.length}</span>
+        </button>
+      </div>
+    `;
+    layer.querySelector('#btn-toggle-ann').onclick = () => {
+      this.state.showAnnotateMode = !this.state.showAnnotateMode;
+      this.showToast(this.state.showAnnotateMode ? '💡 交互点位已全局展示' : '🔇 交互点位已隐藏');
+      this.updateDots();
+      this.updateCapsule();
+    };
+    layer.querySelector('#btn-place-dot').onclick = () => {
+      this.state.isPlacingDot = true;
+      this.state.isSidebarOpen = false;
+      this.showToast('请在屏幕【任意坐标位置】点击打点');
+      this.update();
+    };
+    layer.querySelector('#btn-toggle-sidebar').onclick = () => {
+      this.state.isSidebarOpen = !this.state.isSidebarOpen;
+      this.updateSidebar();
+      this.updateCapsule();
+    };
+  }
+
+  updateSidebar() {
+    const layer = this.shadowRoot.getElementById('sidebar-layer');
+    if (!this.state.isSidebarOpen) {
+      layer.innerHTML = '<div class="lda-panel"></div>';
+      return;
+    }
+    
+    let contentHtml = '';
+    if (this.state.activeTab === 'spec') {
+      contentHtml += `
+        <button class="lda-btn-block" id="btn-sidebar-place">🎯 开启「任意坐标自由打点」模式</button>
+        <div class="lda-list-header">
+          <span>全部批注汇总 (${this.state.comments.length} 条)</span>
+          <button class="lda-text-btn" id="btn-copy-md" title="将所有批注复制为 Markdown 文档">📝 复制 MD</button>
+        </div>
+      `;
+      if (this.state.comments.length === 0) {
+        contentHtml += `<div class="lda-empty-state">暂无批注，请开启打点模式在画布中点击。</div>`;
+      } else {
+        this.state.comments.forEach((item, index) => {
+          contentHtml += `
+            <div class="lda-list-item ${this.isTargetVisible(item) ? 'lda-list-item-current' : ''}">
+              <div class="lda-list-item-header">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span class="lda-list-index">${index + 1}</span>
+                  <h4>${index + 1}. ${item.title}</h4>
+                </div>
+                <button class="lda-btn-del-hover" data-id="${item.id}">删除</button>
+              </div>
+              <p class="lda-list-item-desc">${item.content}</p>
+              ${item.image ? `
+                <div class="lda-list-item-media">
+                  <img src="${item.image}" alt="截图" />
+                </div>
+              ` : ''}
+              <div class="lda-list-item-footer">
+                <span class="lda-scene-tag">📍 ${item.scene || '默认页面'}</span>
+                <span class="lda-item-coord-badge">坐标: ${item.xPercent.toFixed(1)}%, ${item.yPercent.toFixed(1)}%</span>
+              </div>
+            </div>
+          `;
+        });
+      }
+    } else if (this.state.activeTab === 'code') {
+      contentHtml += `
+        <div class="lda-list-header"><span>数据预览</span></div>
+        <p class="lda-help-text">点击上方复制最新源码。</p>
+        <div class="lda-code-preview">
+          <pre><code>${this.getExportCodeString()}</code></pre>
+        </div>
+      `;
+    }
+
+    layer.innerHTML = `
+      <div class="lda-panel-backdrop" id="sidebar-backdrop"></div>
+      <div class="lda-panel lda-panel-open">
+        <header class="lda-panel-header">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="lda-agent-title">● LIVE DEV AGENT</span>
+            <span class="lda-agent-tag">HTML版</span>
+          </div>
+          <button class="lda-btn-primary" id="btn-copy-src">📋 复制最新源码</button>
+        </header>
+        <nav class="lda-tabs">
+          <button class="lda-tab-btn ${this.state.activeTab === 'spec' ? 'lda-tab-active' : ''}" data-tab="spec">📋 交互说明</button>
+          <button class="lda-tab-btn ${this.state.activeTab === 'code' ? 'lda-tab-active' : ''}" data-tab="code">💻 源码数据</button>
+        </nav>
+        <div class="lda-panel-content">${contentHtml}</div>
+      </div>
+    `;
+
+    layer.querySelector('#sidebar-backdrop').onclick = () => { this.state.isSidebarOpen = false; this.update(); };
+    layer.querySelector('#btn-copy-src').onclick = () => this.copyAndSaveSource();
+    layer.querySelectorAll('.lda-tab-btn').forEach(el => {
+      el.onclick = () => { this.state.activeTab = el.getAttribute('data-tab'); this.updateSidebar(); };
+    });
+    
+    if (this.state.activeTab === 'spec') {
+      const btnPlace = layer.querySelector('#btn-sidebar-place');
+      if (btnPlace) btnPlace.onclick = () => {
+        this.state.isPlacingDot = true;
+        this.state.isSidebarOpen = false;
+        this.showToast('请在屏幕点击打点');
+        this.update();
+      };
+      const btnCopyMd = layer.querySelector('#btn-copy-md');
+      if (btnCopyMd) btnCopyMd.onclick = () => this.copyAsMarkdown();
+      layer.querySelectorAll('.lda-btn-del-hover').forEach(el => {
+        el.onclick = () => {
+          const id = parseInt(el.getAttribute('data-id'));
+          const idx = this.state.comments.findIndex(c => c.id === id);
+          if (idx !== -1) {
+            this.state.comments.splice(idx, 1);
+            this.persist();
+            this.showToast('已删除');
+            this.update();
+          }
+        };
+      });
+    }
+  }
+
+  compressImage(file, callback) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxW = 1200;
+        if (width > maxW) {
+          height = Math.round((height * maxW) / width);
+          width = maxW;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+        callback(compressedBase64);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  updateModal(force = false) {
+    const layer = this.shadowRoot.getElementById('modal-layer');
+    if (!this.state.showAddModal) {
+      layer.innerHTML = '';
+      return;
+    }
+    // Only re-render if empty to preserve input states/focus
+    if (layer.innerHTML === '' || force) {
+      const isEdit = this.state.editingId !== null;
+      const indexDisplay = isEdit ? (this.state.comments.findIndex(c => c.id === this.state.editingId) + 1) : (this.state.comments.length + 1);
+      layer.innerHTML = `
+        <div class="lda-modal-mask">
+          <div class="lda-modal">
+            <div class="lda-modal-header">
+              <div class="lda-modal-index">${indexDisplay}</div>
+              <h3>${isEdit ? '编辑交互逻辑标点' : '建立交互逻辑标点'}</h3>
+            </div>
+            <div class="lda-modal-coords">
+              <div>📍 标定 X 轴: <span>${this.state.tempXPercent.toFixed(1)}%</span></div>
+              <div>📍 标定 Y 轴: <span>${this.state.tempYPercent.toFixed(1)}%</span></div>
+            </div>
+            <div class="lda-form-group">
+              <label>交互控制点 (标题)</label>
+              <input type="text" id="modal-title" placeholder="如: 解除绑定二次强校验机制" value="${this.state.newCommentTitle}" />
+            </div>
+            <div class="lda-form-group">
+              <label>交互逻辑说明 (Case 规范格式)</label>
+              <textarea id="modal-content" rows="4" placeholder="Case 1-1..."></textarea>
+            </div>
+            <div class="lda-form-group">
+              <label>相关图片截图 (支持截图粘贴或点击上传)</label>
+              <div class="lda-image-dropzone" id="modal-image-zone">
+                ${this.state.newCommentImage ? `
+                  <div class="lda-image-preview-wrapper">
+                    <img src="${this.state.newCommentImage}" class="lda-image-preview" />
+                    <button class="lda-btn-remove-image" id="btn-remove-image">✕ 删除图片</button>
+                  </div>
+                ` : `
+                  <div class="lda-image-placeholder">
+                    <span>📋 点击此区域上传图片，或在此窗口任意位置按 Ctrl+V / Cmd+V 粘贴截图</span>
+                    <input type="file" id="modal-image-input" accept="image/*" style="display:none;" />
+                  </div>
+                `}
+              </div>
+            </div>
+            <div class="lda-modal-footer">
+              <button class="lda-btn-cancel" id="btn-modal-cancel">取消</button>
+              <button class="lda-btn-submit" id="btn-modal-submit">保存标点</button>
+            </div>
+          </div>
+        </div>
+      `;
+      layer.querySelector('#modal-content').value = this.state.newCommentContent;
+      
+      // Paste listener on the modal mask (so user can paste anywhere when the modal is open)
+      const modalMask = layer.querySelector('.lda-modal-mask');
+      modalMask.addEventListener('paste', (e) => {
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (const item of items) {
+          if (item.type.indexOf('image') === 0) {
+            e.preventDefault();
+            const file = item.getAsFile();
+            this.compressImage(file, (base64) => {
+              this.state.newCommentImage = base64;
+              this.state.newCommentTitle = layer.querySelector('#modal-title').value;
+              this.state.newCommentContent = layer.querySelector('#modal-content').value;
+              this.updateModal(true);
+            });
+          }
+        }
+      });
+
+      // Drag and drop / file input click support
+      const zone = layer.querySelector('#modal-image-zone');
+      if (zone) {
+        zone.onclick = (e) => {
+          if (e.target.id === 'btn-remove-image') return;
+          const input = zone.querySelector('#modal-image-input');
+          if (input) input.click();
+        };
+        
+        const input = zone.querySelector('#modal-image-input');
+        if (input) {
+          input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+              this.compressImage(file, (base64) => {
+                this.state.newCommentImage = base64;
+                this.state.newCommentTitle = layer.querySelector('#modal-title').value;
+                this.state.newCommentContent = layer.querySelector('#modal-content').value;
+                this.updateModal(true);
+              });
+            }
+          };
+        }
+      }
+      
+      const btnRemoveImg = layer.querySelector('#btn-remove-image');
+      if (btnRemoveImg) {
+        btnRemoveImg.onclick = (e) => {
+          e.stopPropagation();
+          this.state.newCommentImage = '';
+          this.state.newCommentTitle = layer.querySelector('#modal-title').value;
+          this.state.newCommentContent = layer.querySelector('#modal-content').value;
+          this.updateModal(true);
+        };
+      }
+
+      layer.querySelector('#btn-modal-cancel').onclick = () => {
+        this.state.showAddModal = false;
+        this.state.editingId = null;
+        this.state.newCommentImage = '';
+        this.showToast('已取消');
+        this.update();
+      };
+      layer.querySelector('#btn-modal-submit').onclick = () => {
+        const title = layer.querySelector('#modal-title').value;
+        const content = layer.querySelector('#modal-content').value;
+        if (!title || !content) {
+          this.showToast('⚠️ 标题与说明皆为必填项');
+          return;
+        }
+        if (this.state.editingId !== null) {
+          const idx = this.state.comments.findIndex(c => c.id === this.state.editingId);
+          if (idx !== -1) {
+            this.state.comments[idx].title = title;
+            this.state.comments[idx].content = content;
+            this.state.comments[idx].image = this.state.newCommentImage;
+          }
+        } else {
+          this.state.comments.push({
+            id: this.state.comments.length > 0 ? Math.max(...this.state.comments.map(c => c.id)) + 1 : 1,
+            title, content,
+            image: this.state.newCommentImage,
+            xPercent: this.state.tempXPercent,
+            yPercent: this.state.tempYPercent,
+            scene: this.state.tempSceneName,
+            selector: this.state.tempSelector
+          });
+        }
+        this.state.showAddModal = false;
+        this.state.editingId = null;
+        this.state.newCommentImage = '';
+        this.state.showAnnotateMode = true;
+        this.persist();
+        this.showToast('✅ 成功标定并写入内存');
+        this.update();
+      };
+    }
+  }
+}
+
+customElements.define('sase-annotation-panel', SaseAnnotationPanel);
+
+</script>
+<sase-annotation-panel></sase-annotation-panel>
+<!-- SASE Annotation Kit End -->
+
+
+<script id="sase-annotations" type="application/json">
+{
+  "timestamp": 0,
+  "comments": []
+}
+</script>
+</body>
+
+</html>

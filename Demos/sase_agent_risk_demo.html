@@ -1,0 +1,1748 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>SASE 云安全访问服务 - Agent 风险识别</title>
+  <!-- Google Fonts: Outfit for numbers/labels, Inter for general text -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'PingFang SC', 'sans-serif'],
+            outfit: ['Outfit', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- SeerDesign Custom Variables and Styled Overrides -->
+  <link rel="stylesheet" href="../assets/css-overrides.css">
+
+  <style>
+    /* Custom Sidebar Styles following SASE Specification */
+    .sase-sidebar {
+      background-color: #272E38;
+      font-family: var(--seer-font-family);
+    }
+    
+    .sase-menu-group-title {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--color-graphite);
+      padding: 8px 16px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      user-select: none;
+    }
+
+    .sase-menu-item-l1 {
+      height: 40px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 400;
+      color: #FFFFFF;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    
+    .sase-menu-item-l1:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    /* Parent Active Level 1 Menu */
+    .sase-menu-item-l1.parent-active {
+      background-color: #1E232B;
+    }
+
+    .sase-menu-item-l1.parent-active .sase-icon {
+      color: var(--color-blue) !important;
+    }
+
+    .sase-menu-item-l2 {
+      height: 36px;
+      padding: 0 16px 0 40px;
+      display: flex;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 400;
+      color: #FFFFFF;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .sase-menu-item-l2:hover {
+      background-color: rgba(255, 255, 255, 0.03);
+    }
+
+    .sase-menu-item-l2.selected {
+      background: linear-gradient(90deg, rgba(28, 110, 255, 0.2) 0%, rgba(28, 110, 255, 0) 100%);
+      font-weight: 600;
+    }
+
+    .sase-menu-item-l2.selected::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background-color: var(--color-blue);
+      z-index: 10;
+    }
+
+    .sase-menu-item-l2.selected .sase-dot {
+      background-color: #4BFFC6 !important;
+      box-shadow: 0 0 4px rgba(75, 255, 198, 0.6);
+    }
+
+    .sase-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background-color: #FFFFFF;
+      margin-right: 8px;
+      transition: all 0.2s;
+    }
+
+    /* Submenu Wrapper */
+    .sase-submenu {
+      background-color: #1E232B;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out;
+    }
+
+    /* Layout overrides */
+    .app-container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .main-viewport {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--color-graphite-l50);
+    }
+
+    /* Page Header Page Title with Tabs */
+    .page-title-bar {
+      height: 48px;
+      background-color: var(--color-white);
+      border-bottom: 1px solid var(--color-graphite-l30);
+      display: flex;
+      align-items: center;
+      padding-left: 16px;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .page-title-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--color-graphite-d40);
+    }
+
+    .page-title-divider {
+      width: 1px;
+      height: 16px;
+      background-color: var(--color-graphite-l30);
+      margin: 0 12px;
+    }
+
+    .page-title-tab-container {
+      display: flex;
+      height: 100%;
+      align-items: center;
+    }
+
+    .page-title-tab {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--color-graphite-d40); /* Standard body text color as per spec */
+      padding: 0 16px;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s;
+      user-select: none;
+    }
+
+    .page-title-tab:hover {
+      color: var(--color-blue);
+    }
+
+    .page-title-tab.active {
+      color: var(--color-blue);
+      font-weight: 600; /* As per high frequency violation table rule 13 */
+    }
+
+    .page-title-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; /* Overlap divider line */
+      left: 16px; /* Span matches exactly the text width */
+      right: 16px;
+      height: 2px;
+      background-color: var(--color-blue);
+      border-radius: 2px 2px 0 0;
+    }
+
+    /* Scrollable body content */
+    .main-body-content {
+      flex: 1;
+      overflow: hidden;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Detail Drawer container */
+    .drawer-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(30, 35, 43, 0.45);
+      z-index: 990;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .drawer-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .sd-drawer-container {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 800px;
+      background-color: var(--color-white);
+      box-shadow: var(--seer-dropshadow-s3);
+      z-index: 1000;
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sd-drawer-container.open {
+      transform: translateX(0);
+    }
+
+    /* Toast styles */
+    .toast-container {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1100;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* Override table cell height and padding to allow vertical expansion & vertical alignment */
+    .sd-table td {
+      height: auto !important;
+      min-height: 40px;
+      padding-top: 4px !important;
+      padding-bottom: 4px !important;
+      vertical-align: middle !important;
+    }
+
+    /* ========================================================
+       Sticky Columns for Horizontal Scrolling
+       ======================================================== */
+    .sd-table td {
+      background-color: #ffffff; /* 确保普通单元格背景为白色，不透明 */
+    }
+
+    .sticky-op-col {
+      position: sticky !important;
+      right: 40px !important;
+      background-color: #ffffff !important;
+      z-index: 10;
+      width: 120px !important;
+      min-width: 120px !important;
+      max-width: 120px !important;
+      box-shadow: inset 0 -1px 0 var(--color-graphite-l30) !important;
+    }
+    
+    th.sticky-op-col {
+      background-color: var(--color-graphite-l40) !important;
+      z-index: 15;
+      box-shadow: inset 0 -1px 0 var(--color-graphite-l30) !important;
+    }
+    
+    tr:hover td.sticky-op-col {
+      background-color: var(--color-graphite-l50) !important;
+      box-shadow: inset 0 -1px 0 var(--color-graphite-l30) !important;
+    }
+    
+    .sticky-more-col {
+      position: sticky !important;
+      right: 0 !important;
+      background-color: #ffffff !important;
+      z-index: 10;
+      width: 40px !important;
+      min-width: 40px !important;
+      max-width: 40px !important;
+      box-shadow: inset 0 -1px 0 var(--color-graphite-l30) !important;
+    }
+    
+    th.sticky-more-col {
+      background-color: var(--color-graphite-l40) !important;
+      z-index: 15;
+      box-shadow: inset 0 -1px 0 var(--color-graphite-l30) !important;
+    }
+    
+    tr:hover td.sticky-more-col {
+      background-color: var(--color-graphite-l50) !important;
+      box-shadow: inset 0 -1px 0 var(--color-graphite-l30) !important;
+    }
+
+    /* 美化横向/纵向滚动条 */
+    .sd-table-responsive::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .sd-table-responsive::-webkit-scrollbar-thumb {
+      background-color: var(--color-graphite-l20) !important;
+      border-radius: 3px !important;
+    }
+    .sd-table-responsive::-webkit-scrollbar-thumb:hover {
+      background-color: var(--color-graphite-l10) !important;
+    }
+    .sd-table-responsive::-webkit-scrollbar-track {
+      background: transparent !important;
+    }
+
+    /* 当表格右侧有可滚动内容时，在操作列左侧渲染一个细腻的渐变投影 */
+    .table-scrolling-right .sticky-op-col::after {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 20px;
+      transform: translateX(-100%);
+      content: "";
+      pointer-events: none;
+      box-shadow: inset -10px 0 8px -8px rgba(30, 35, 43, 0.15);
+      z-index: 12;
+      opacity: 1;
+      transition: opacity 0.3s ease;
+    }
+    
+    /* 默认状态下隐藏阴影 */
+    .sticky-op-col::after {
+      content: "";
+      position: absolute;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- LEFT SIDEBAR NAV -->
+    <div class="sase-sidebar w-[240px] h-screen flex flex-col flex-shrink-0 text-white select-none">
+      
+      <!-- Logo Header -->
+      <div class="h-[56px] px-2 flex items-center border-b border-[#363f4b] flex-shrink-0">
+        <div class="w-[32px] h-[32px] rounded ml-2 flex items-center justify-center flex-shrink-0 font-bold text-sm tracking-wide text-white" style="background: linear-gradient(135deg, #4BFFC6, #1C6EFF);">
+          SD
+        </div>
+        <span class="ml-2 text-sm font-semibold tracking-wide truncate">云安全访问服务</span>
+        <!-- Fold Button -->
+        <button class="ml-auto mr-1 w-6 h-6 rounded hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path></svg>
+        </button>
+      </div>
+
+      <!-- Menu Navigation (Scrollable) -->
+      <div class="flex-1 overflow-y-auto py-3">
+        
+        <!-- Group 0: Overview -->
+        <div class="sase-menu-item-l1" onclick="toggleMenu('overview')">
+          <span class="w-4 h-4 mr-2 text-gray-400">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+          </span>
+          <span>概览</span>
+          <svg class="w-3 h-3 ml-auto text-gray-400 transform transition-transform" id="arrow-overview" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+        <div class="sase-submenu hidden" id="sub-overview">
+          <div class="sase-menu-item-l2" onclick="showToast('首页')"><span class="sase-dot"></span>首页</div>
+          <div class="sase-menu-item-l2" onclick="showToast('用户状态')"><span class="sase-dot"></span>用户状态</div>
+          <div class="sase-menu-item-l2" onclick="showToast('分支监控')"><span class="sase-dot"></span>分支监控</div>
+        </div>
+
+        <div class="sase-menu-item-l1" onclick="toggleMenu('log-center')">
+          <span class="w-4 h-4 mr-2 text-gray-400">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          </span>
+          <span>日志中心</span>
+          <svg class="w-3 h-3 ml-auto text-gray-400 transform transition-transform" id="arrow-log-center" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+        <div class="sase-submenu hidden" id="sub-log-center">
+          <div class="sase-menu-group-title ml-6 text-gray-500">核心功能</div>
+          <div class="sase-menu-item-l2" onclick="showToast('零信任访问日志')"><span class="sase-dot"></span>零信任访问日志</div>
+          <div class="sase-menu-item-l2" onclick="showToast('数据防泄密日志')"><span class="sase-dot"></span>数据防泄密日志</div>
+          <div class="sase-menu-item-l2" onclick="showToast('互联网安全日志')"><span class="sase-dot"></span>互联网安全日志</div>
+        </div>
+
+        <!-- Section Group: 核心功能 -->
+        <div class="sase-menu-group-title">核心功能</div>
+
+        <div class="sase-menu-item-l1" onclick="toggleMenu('ztna')">
+          <span class="w-4 h-4 mr-2 text-gray-400">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+          </span>
+          <span>零信任网络访问</span>
+          <svg class="w-3 h-3 ml-auto text-gray-400 transform transition-transform" id="arrow-ztna" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+        <div class="sase-submenu hidden" id="sub-ztna">
+          <div class="sase-menu-item-l2" onclick="showToast('连接器管理')"><span class="sase-dot"></span>连接器管理</div>
+          <div class="sase-menu-item-l2" onclick="showToast('应用管理')"><span class="sase-dot"></span>应用管理</div>
+          <div class="sase-menu-item-l2" onclick="showToast('安全策略')"><span class="sase-dot"></span>安全策略</div>
+        </div>
+
+        <!-- NEW GENAI PROTECTION MODULE - Parent Active state -->
+        <div class="sase-menu-item-l1 parent-active" onclick="toggleMenu('genai-protect')">
+          <span class="w-4 h-4 mr-2 text-blue-500 sase-icon">
+            <!-- Brain / AI Icon -->
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+          </span>
+          <span class="font-medium">GENAI 保护</span>
+          <svg class="w-3 h-3 ml-auto text-gray-400 transform transition-transform rotate-180" id="arrow-genai-protect" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+        <!-- Submenu default expanded -->
+        <div class="sase-submenu" id="sub-genai-protect" style="max-height: 200px;">
+          <div class="sase-menu-item-l2 selected">
+            <span class="sase-dot"></span>Agent风险识别
+          </div>
+        </div>
+
+        <div class="sase-menu-item-l1" onclick="toggleMenu('dlp')">
+          <span class="w-4 h-4 mr-2 text-gray-400">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+          </span>
+          <span>数据防泄密</span>
+          <svg class="w-3 h-3 ml-auto text-gray-400 transform transition-transform" id="arrow-dlp" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+        <div class="sase-submenu hidden" id="sub-dlp">
+          <div class="sase-menu-group-title ml-6 text-gray-500">分析</div>
+          <div class="sase-menu-item-l2" onclick="showToast('数据外发分析')"><span class="sase-dot"></span>数据外发分析</div>
+          <div class="sase-menu-item-l2" onclick="showToast('GenAI应用保护')"><span class="sase-dot"></span>GenAI应用保护</div>
+        </div>
+
+        <div class="sase-menu-item-l1" onclick="toggleMenu('internet-sec')">
+          <span class="w-4 h-4 mr-2 text-gray-400">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+          </span>
+          <span>互联网安全访问</span>
+          <svg class="w-3 h-3 ml-auto text-gray-400 transform transition-transform" id="arrow-internet-sec" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+        <div class="sase-submenu hidden" id="sub-internet-sec">
+          <div class="sase-menu-item-l2" onclick="showToast('上网行为分析')"><span class="sase-dot"></span>上网行为分析</div>
+        </div>
+
+        <!-- Section Group: 平台管理 -->
+        <div class="sase-menu-group-title">平台管理</div>
+        
+        <div class="sase-menu-item-l1" onclick="toggleMenu('identity-mgmt')">
+          <span class="w-4 h-4 mr-2 text-gray-400">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+          </span>
+          <span>身份管理</span>
+          <svg class="w-3 h-3 ml-auto text-gray-400 transform transition-transform" id="arrow-identity-mgmt" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+        <div class="sase-submenu hidden" id="sub-identity-mgmt">
+          <div class="sase-menu-item-l2" onclick="showToast('用户管理')"><span class="sase-dot"></span>用户管理</div>
+        </div>
+
+        <div class="sase-menu-item-l1" onclick="toggleMenu('endpoint-mgmt')">
+          <span class="w-4 h-4 mr-2 text-gray-400">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+          </span>
+          <span>终端管理</span>
+          <svg class="w-3 h-3 ml-auto text-gray-400 transform transition-transform" id="arrow-endpoint-mgmt" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+        <div class="sase-submenu hidden" id="sub-endpoint-mgmt">
+          <div class="sase-menu-item-l2" onclick="showToast('终端资产')"><span class="sase-dot"></span>终端资产</div>
+          <div class="sase-menu-item-l2" onclick="showToast('软件管理')"><span class="sase-dot"></span>软件管理</div>
+        </div>
+
+        <!-- System Management Leaf Node -->
+        <div class="sase-menu-item-l1" onclick="showToast('系统管理')">
+          <span class="w-4 h-4 mr-2 text-gray-400">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+          </span>
+          <span>系统管理</span>
+        </div>
+
+      </div>
+
+      <!-- Sider User Profile Footer -->
+      <div class="h-[44px] px-4 border-t border-[#363f4b] flex items-center bg-[#212730] flex-shrink-0">
+        <!-- User Avatar -->
+        <div class="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-[10px] text-white font-semibold flex-shrink-0">
+          U
+        </div>
+        <span class="ml-2 text-xs font-normal text-white/85 truncate">Admin (管理员)</span>
+        <!-- Lock/Logout icon -->
+        <button class="ml-auto w-4 h-4 text-gray-400 hover:text-white" onclick="showToast('退出登录')">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- MAIN VIEWPORT -->
+    <div class="main-viewport">
+      
+      <!-- PAGE HEADER WITH TITLE & TABS (Left Aligned Tabs, 48px Height, Inactive color #2F3540, Active weight 600) -->
+      <div class="page-title-bar">
+        <span class="page-title-text text-sm">Agent风险识别</span>
+        <span class="page-title-divider"></span>
+        <div class="page-title-tab-container">
+          <div class="page-title-tab active" id="tab-btn-visible" onclick="switchView('visible')">Agent风险可视</div>
+          <div class="page-title-tab" id="tab-btn-analysis" onclick="switchView('analysis')">AI应用分析</div>
+        </div>
+      </div>
+
+      <!-- MAIN BODY CONTENT (Fully layout sticky & flex column) -->
+      <div class="main-body-content" id="view-container">
+        
+        <!-- ==================== VIEW 1: AGENT RISK VISIBLE (Default) ==================== -->
+        <div id="view-visible" class="flex-1 flex flex-col overflow-hidden space-y-4">
+          
+          <!-- Statistics Cards Grid (4 columns, Fixed Height) -->
+          <div class="grid grid-cols-4 gap-4 flex-shrink-0">
+            
+            <!-- Card 1: Installed Agent Total -->
+            <div class="bg-white border border-[#E1E5EB] rounded-[2px] p-4 flex flex-col justify-between h-[96px] shadow-[0_1px_3px_rgba(0,0,0,0.05)] transition-all hover:shadow-[0_4px_12px_rgba(30,35,43,0.08)]">
+              <span class="text-xs font-normal text-[#6F7785]">全企业安装 Agent 总数</span>
+              <div class="flex items-baseline mt-1">
+                <span class="text-[28px] font-bold font-outfit text-[#2F3540] leading-none">142</span>
+                <span class="text-[12px] font-normal text-[#6F7785] ml-1">个</span>
+              </div>
+              <div class="text-[11px] text-[#A1A7B3] flex items-center gap-3 mt-1">
+                <span>本地桌面: <b class="font-outfit text-[#5E6573] font-semibold">98</b></span>
+                <span class="w-[1px] h-[10px] bg-gray-200"></span>
+                <span>AgentSpace沙箱: <b class="font-outfit text-[#5E6573] font-semibold">44</b></span>
+              </div>
+            </div>
+
+            <!-- Card 2: Risky Agent Terminals -->
+            <div class="bg-white border border-[#E1E5EB] rounded-[2px] p-4 flex flex-col justify-between h-[96px] shadow-[0_1px_3px_rgba(0,0,0,0.05)] transition-all hover:shadow-[0_4px_12px_rgba(30,35,43,0.08)]">
+              <span class="text-xs font-normal text-[#6F7785]">风险 Agent 终端</span>
+              <div class="flex items-baseline mt-1 justify-between">
+                <div class="flex items-baseline">
+                  <span class="text-[28px] font-bold font-outfit text-[#CF171D] leading-none">28</span>
+                  <span class="text-[12px] font-normal text-[#6F7785] ml-1">台</span>
+                </div>
+                <span class="text-xs px-1.5 py-0.5 rounded-[2px] bg-[#FFF2F2] text-[#CF171D] font-outfit font-semibold">19.7% 占比</span>
+              </div>
+              <div class="text-[11px] text-[#A1A7B3] flex items-center gap-1.5 mt-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-[#CF171D] animate-pulse"></span>
+                <span>需要立即进行隔离或部署沙箱</span>
+              </div>
+            </div>
+
+            <!-- Card 3: Configuration Risks Detail -->
+            <div class="bg-white border border-[#E1E5EB] rounded-[2px] p-4 flex flex-col justify-between h-[96px] shadow-[0_1px_3px_rgba(0,0,0,0.05)] transition-all hover:shadow-[0_4px_12px_rgba(30,35,43,0.08)]">
+              <span class="text-xs font-normal text-[#6F7785]">配置风险分布统计</span>
+              <div class="flex items-baseline mt-1">
+                <span class="text-[28px] font-bold font-outfit text-[#FA721B] leading-none">36</span>
+                <span class="text-[12px] font-normal text-[#6F7785] ml-1">项</span>
+              </div>
+              <div class="text-[10px] text-[#6F7785] flex flex-wrap gap-x-2 mt-1 truncate">
+                <span>公网暴露: <b class="font-outfit text-[#2F3540]">8</b></span>
+                <span>未认证: <b class="font-outfit text-[#2F3540]">14</b></span>
+                <span>非沙箱: <b class="font-outfit text-[#2F3540]">12</b></span>
+                <span>免@: <b class="font-outfit text-[#2F3540]">2</b></span>
+              </div>
+            </div>
+
+            <!-- Card 4: Tool / Plugin Risks -->
+            <div class="bg-white border border-[#E1E5EB] rounded-[2px] p-4 flex flex-col justify-between h-[96px] shadow-[0_1px_3px_rgba(0,0,0,0.05)] transition-all hover:shadow-[0_4px_12px_rgba(30,35,43,0.08)]">
+              <span class="text-xs font-normal text-[#6F7785]">工具与插件风险 (Skills/MCP)</span>
+              <div class="flex items-baseline mt-1">
+                <span class="text-[28px] font-bold font-outfit text-[#FA721B] leading-none">15</span>
+                <span class="text-[12px] font-normal text-[#6F7785] ml-1">个</span>
+              </div>
+              <div class="text-[11px] text-[#A1A7B3] flex items-center gap-3 mt-1">
+                <span>恶意 Skills: <b class="font-outfit text-[#5E6573] font-semibold">9</b></span>
+                <span class="w-[1px] h-[10px] bg-gray-200"></span>
+                <span>恶意 MCP 服务: <b class="font-outfit text-[#5E6573] font-semibold">6</b></span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Alert Bar Notification (Without border, compliance alert, uniform text color, 16px link gap) -->
+          <div class="sd-alert sd-alert-warning flex items-center flex-shrink-0" id="risk-banner">
+            <span class="sd-alert-icon text-[#A35F40]">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+            </span>
+            <div class="text-[12px] text-[#A35F40] flex-1">
+              检测到企业内有 5 台终端运行有恶意 MCP 插件，包含可执行非法命令获取密钥的恶意 Skill，可能危害内网安全。
+              <a href="javascript:void(0)" onclick="executeBatchRemediation()" class="font-semibold text-blue-600 hover:text-blue-500 ml-4 hover:underline">立即一键沙箱化修复</a>
+            </div>
+            <span class="sd-alert-close text-[#A35F40] hover:text-[#82010E]" onclick="dismissAlert('risk-banner')">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </span>
+          </div>
+
+          <!-- Card Wrapper for List and Toolbar (Takes all remaining height and layout scroll) -->
+          <div class="bg-white border border-[#E1E5EB] rounded-[2px] p-4 flex flex-col flex-1 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+            
+            <!-- Toolbar Area (Swapped: Action buttons on LEFT, filters on RIGHT, text-only buttons - NO icons) -->
+            <div class="flex items-center justify-between mb-4 select-none flex-shrink-0">
+              
+              <!-- Action Buttons (Left side - Text only, NO icons) -->
+              <div class="flex items-center gap-2">
+                <button class="sd-btn sd-btn-primary" onclick="executeBatchRemediation()">一键沙箱化部署</button>
+                <button class="sd-btn sd-btn-default" onclick="showToast('导出报表成功')">导出报表</button>
+              </div>
+
+              <!-- Search and Filters (Right side) -->
+              <div class="flex items-center gap-3">
+                
+                <!-- Environment Select (Wrapper contains single select mapping) -->
+                <div class="sd-select sd-select-single w-[140px]" id="filter-env-wrapper">
+                  <div class="sd-select-selector cursor-pointer" onclick="toggleSelectDropdown('dropdown-env')">
+                    <span class="sd-select-selection-item text-[#2F3540]" id="selected-env">运行环境: 全部</span>
+                    <svg class="w-3 h-3 ml-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                  </div>
+                  <!-- Dropdown Menu -->
+                  <div class="sd-select-dropdown hidden w-[140px] mt-1" id="dropdown-env">
+                    <div class="sd-select-item sd-select-item-selected" onclick="selectFilter('env', '全部')">运行环境: 全部</div>
+                    <div class="sd-select-item" onclick="selectFilter('env', '本地桌面')">本地桌面</div>
+                    <div class="sd-select-item" onclick="selectFilter('env', 'AgentSpace 沙箱')">AgentSpace 沙箱</div>
+                  </div>
+                </div>
+
+                <!-- Risk Select -->
+                <div class="sd-select sd-select-single w-[140px]" id="filter-risk-wrapper">
+                  <div class="sd-select-selector cursor-pointer" onclick="toggleSelectDropdown('dropdown-risk')">
+                    <span class="sd-select-selection-item text-[#2F3540]" id="selected-risk">风险级别: 全部</span>
+                    <svg class="w-3 h-3 ml-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                  </div>
+                  <!-- Dropdown Menu -->
+                  <div class="sd-select-dropdown hidden w-[140px] mt-1" id="dropdown-risk">
+                    <div class="sd-select-item sd-select-item-selected" onclick="selectFilter('risk', '全部')">风险级别: 全部</div>
+                    <div class="sd-select-item" onclick="selectFilter('risk', '存在风险')">存在风险</div>
+                    <div class="sd-select-item" onclick="selectFilter('risk', '无风险')">无风险</div>
+                  </div>
+                </div>
+
+                <!-- Search Input (240px wide, default Placeholder "搜索", Close icon dynamic on left of search icon) -->
+                <div class="basic-search w-[240px] relative">
+                  <input type="text" id="search-input" oninput="handleSearch()" class="sd-input w-full pr-[48px]" placeholder="搜索">
+                  <div class="search-icon-wrapper flex items-center justify-end pr-2 gap-1">
+                    <!-- Close icon: hidden by default, visible when input has content -->
+                    <svg id="search-clear-btn" class="w-3.5 h-3.5 text-gray-400 hover:text-blue-500 cursor-pointer hidden" onclick="clearSearch()" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    <!-- Search icon -->
+                    <svg class="search-icon w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                  </div>
+                </div>
+
+                <!-- Refresh Button (32x32px as per page template spec) -->
+                <button class="sd-btn sd-btn-default w-8 h-8 p-0 flex items-center justify-center flex-shrink-0" onclick="showToast('数据已刷新'); applyFilters();">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H17"></path></svg>
+                </button>
+
+              </div>
+
+            </div>
+
+            <!-- Table (Scrolls independently within its own wrapper container) -->
+            <div class="flex-1 min-h-0 overflow-auto w-full sd-table-responsive"
+                 onscroll="this.querySelector('table').classList.toggle('table-scrolling-right', (this.scrollWidth - this.scrollLeft - this.clientWidth) > 1)">
+              <table class="sd-table w-full min-w-[1300px] table-fixed rounded-none table-scrolling-right">
+                <thead>
+                  <tr>
+                    <th class="w-10 min-w-[40px] text-center serial-column">序号</th>
+                    <th class="w-[120px] min-w-[120px]">Agent 类型</th>
+                    <th class="w-[160px] min-w-[160px]">安装终端</th>
+                    <th class="w-[140px] min-w-[140px]">终端归属</th>
+                    <th class="w-[120px] min-w-[120px]">终端 IP</th>
+                    <th class="w-[160px] min-w-[160px]">运行环境</th>
+                    <th class="w-[200px] min-w-[200px]">配置风险</th>
+                    <!-- 工具与插件风险列作为弹性伸缩列，不设固定 w-X，只设最小宽度，吸收额外伸展空间 -->
+                    <th class="min-w-[200px]">工具与插件风险</th>
+                    <th class="w-[120px] min-w-[120px] sticky-op-col">操作</th>
+                    <!-- More column fixed 40px with centering ellipsis as requested in spec -->
+                    <th class="w-10 min-w-[40px] text-center sticky-more-col cursor-pointer hover:text-[#1C6EFF] select-none" onclick="showToast('正在打开表格列设置...')">...</th>
+                  </tr>
+                </thead>
+                <tbody id="table-body">
+                  <!-- JS will render rows here dynamically -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Pagination (Sticky at the bottom of the card, 1px border-top divider, meeting spec) -->
+            <div class="h-10 border-t border-[#E1E5EB] flex items-center justify-between flex-shrink-0 pt-2 mt-2 select-none">
+              <span class="text-xs text-[#6F7785]">显示 1 到 6 条，共 142 条数据</span>
+              <div class="sd-pagination">
+                <span class="sd-pagination-total text-xs text-gray-400 mr-2">共 142 项</span>
+                
+                <!-- Pages list -->
+                <button class="sd-pagination-item text-xs text-[#2F3540] flex items-center justify-center hover:border-[#1C6EFF]" onclick="showToast('已到第一页')">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                </button>
+                <div class="sd-pagination-item-active flex items-center justify-center text-white text-xs cursor-default">1</div>
+                <div class="sd-pagination-item flex items-center justify-center text-xs text-[#2F3540]" onclick="showToast('切换至第 2 页')">2</div>
+                <div class="sd-pagination-item flex items-center justify-center text-xs text-[#2F3540]" onclick="showToast('切换至第 3 页')">3</div>
+                <div class="sd-pagination-item flex items-center justify-center text-xs text-[#2F3540]" onclick="showToast('切换至第 4 页')">4</div>
+                <div class="sd-pagination-item flex items-center justify-center text-xs text-[#2F3540]" onclick="showToast('切换至第 5 页')">5</div>
+                <button class="sd-pagination-item text-xs text-[#2F3540] flex items-center justify-center hover:border-[#1C6EFF]" onclick="showToast('切换至下一页')">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+
+                <!-- Page Quick Jumper -->
+                <span class="text-xs text-[#6F7785] ml-2">前往</span>
+                <div class="sd-pagination-jumper">
+                  <input type="text" value="1" onkeypress="handlePageJump(event)">
+                </div>
+                <span class="text-xs text-[#6F7785]">页</span>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- ==================== VIEW 2: AI APPLICATION ANALYSIS (Charts Dashboard) ==================== -->
+        <div id="view-analysis" class="flex-1 flex flex-col overflow-y-auto space-y-4 hidden select-none">
+          
+          <!-- Top cards row -->
+          <div class="grid grid-cols-3 gap-4">
+            
+            <div class="bg-white border border-[#E1E5EB] rounded-[2px] p-4 flex items-center justify-between shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+              <div>
+                <span class="text-xs font-normal text-[#6F7785]">AI 应用访问次数 (近30天)</span>
+                <div class="text-2xl font-bold font-outfit text-[#2F3540] mt-1">1,248,590</div>
+                <span class="text-[11px] text-[#12A679] flex items-center gap-1 mt-1 font-semibold">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 11.586 14.586 8H12z" clip-rule="evenodd"></path></svg>
+                  同比上周 +24.8%
+                </span>
+              </div>
+              <div class="text-blue-500 w-10 h-10 rounded-[2px] bg-[#E8F4FF] flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+              </div>
+            </div>
+
+            <div class="bg-white border border-[#E1E5EB] rounded-[2px] p-4 flex items-center justify-between shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+              <div>
+                <span class="text-xs font-normal text-[#6F7785]">企业 AI 累计 Token 吞吐</span>
+                <div class="text-2xl font-bold font-outfit text-[#2F3540] mt-1">8,241.6 万</div>
+                <span class="text-[11px] text-[#6F7785] flex items-center gap-1 mt-1">
+                  输入: <span class="font-outfit text-[#2F3540] font-semibold">5,120 万</span> | 输出: <span class="font-outfit text-[#2F3540] font-semibold">3,121.6 万</span>
+                </span>
+              </div>
+              <div class="text-[#FA721B] w-10 h-10 rounded-[2px] bg-[#FFF2F2] flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+              </div>
+            </div>
+
+            <div class="bg-white border border-[#E1E5EB] rounded-[2px] p-4 flex items-center justify-between shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+              <div>
+                <span class="text-xs font-normal text-[#6F7785]">敏感/密钥输入拦截数</span>
+                <div class="text-2xl font-bold font-outfit text-[#CF171D] mt-1">456 次</div>
+                <span class="text-[11px] text-red-500 flex items-center gap-1 mt-1 font-semibold">
+                  已拦截高危外发威胁 100%
+                </span>
+              </div>
+              <div class="text-red-500 w-10 h-10 rounded-[2px] bg-[#FFF2F2] flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Charts Section Grid -->
+          <div class="grid grid-cols-3 gap-4">
+            
+            <!-- SVG Line Chart (2 cols) -->
+            <div class="bg-white border border-[#E1E5EB] rounded-[2px] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.05)] col-span-2">
+              <h3 class="text-xs font-semibold text-[#2F3540] mb-3">企业 GenAI 访问流量趋势 (近30天)</h3>
+              <div class="h-[220px] w-full flex flex-col justify-end">
+                <!-- SVG Area -->
+                <svg viewBox="0 0 600 200" class="w-full h-[180px] overflow-visible">
+                  <defs>
+                    <linearGradient id="chart-grad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#1C6EFF" stop-opacity="0.25"/>
+                      <stop offset="100%" stop-color="#1C6EFF" stop-opacity="0.0"/>
+                    </linearGradient>
+                  </defs>
+                  
+                  <!-- Grid Lines -->
+                  <line x1="0" y1="20" x2="600" y2="20" stroke="#EDF1F7" stroke-width="1" />
+                  <line x1="0" y1="70" x2="600" y2="70" stroke="#EDF1F7" stroke-width="1" />
+                  <line x1="0" y1="120" x2="600" y2="120" stroke="#EDF1F7" stroke-width="1" />
+                  <line x1="0" y1="170" x2="600" y2="170" stroke="#D3D7DE" stroke-width="1" />
+
+                  <!-- Fill Area -->
+                  <path d="M 0 170 Q 100 130 200 90 T 400 40 T 600 20 L 600 170 Z" fill="url(#chart-grad)" />
+
+                  <!-- Glowing Line -->
+                  <path d="M 0 170 Q 100 130 200 90 T 400 40 T 600 20" fill="none" stroke="#1C6EFF" stroke-width="3" />
+
+                  <!-- Data Point Dots -->
+                  <circle cx="200" cy="90" r="4" fill="#1C6EFF" stroke="#FFFFFF" stroke-width="2" />
+                  <circle cx="400" cy="40" r="4" fill="#1C6EFF" stroke="#FFFFFF" stroke-width="2" />
+                  <circle cx="600" cy="20" r="4" fill="#1C6EFF" stroke="#FFFFFF" stroke-width="2" />
+                  
+                  <!-- Hover tooltip content mock -->
+                  <text x="350" y="25" font-family="sans-serif" font-size="10" fill="#2F3540" font-weight="600" bgcolor="white">5.20 流量高峰: 42.1 GB</text>
+                </svg>
+                
+                <!-- X-Axis Labels -->
+                <div class="flex justify-between text-[10px] text-[#A1A7B3] mt-2 font-outfit px-1">
+                  <span>05-01</span>
+                  <span>05-07</span>
+                  <span>05-14</span>
+                  <span>05-21</span>
+                  <span>05-27</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- SVG Donut Chart (1 col) -->
+            <div class="bg-white border border-[#E1E5EB] rounded-[2px] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.05)] flex flex-col">
+              <h3 class="text-xs font-semibold text-[#2F3540] mb-3">AI 应用访问分布 (基于 Token)</h3>
+              <div class="flex-1 flex items-center justify-between px-2">
+                <!-- Donut SVG -->
+                <svg width="120" height="120" viewBox="0 0 40 40" class="transform -rotate-90">
+                  <circle cx="20" cy="20" r="15.915" fill="transparent" stroke="#E1E5EB" stroke-width="5"></circle>
+                  <!-- Segment 1: ChatGPT (42%) -->
+                  <circle cx="20" cy="20" r="15.915" fill="transparent" stroke="#1C6EFF" stroke-width="5.2" stroke-dasharray="42 58" stroke-dashoffset="0"></circle>
+                  <!-- Segment 2: Claude (28%) -->
+                  <circle cx="20" cy="20" r="15.915" fill="transparent" stroke="#4FA1FF" stroke-width="5.2" stroke-dasharray="28 72" stroke-dashoffset="-42"></circle>
+                  <!-- Segment 3: DeepSeek (18%) -->
+                  <circle cx="20" cy="20" r="15.915" fill="transparent" stroke="#0BA7B5" stroke-width="5.2" stroke-dasharray="18 82" stroke-dashoffset="-70"></circle>
+                  <!-- Segment 4: Kimi / Others (12%) -->
+                  <circle cx="20" cy="20" r="15.915" fill="transparent" stroke="#FDAA1D" stroke-width="5.2" stroke-dasharray="12 88" stroke-dashoffset="-88"></circle>
+                </svg>
+
+                <!-- Legends -->
+                <div class="flex flex-col gap-2.5 text-xs text-[#2F3540]">
+                  <div class="flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#1C6EFF]"></span>
+                    <span class="w-[60px]">ChatGPT</span>
+                    <span class="font-outfit font-semibold text-[#6F7785]">42%</span>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#4FA1FF]"></span>
+                    <span class="w-[60px]">Claude</span>
+                    <span class="font-outfit font-semibold text-[#6F7785]">28%</span>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#0BA7B5]"></span>
+                    <span class="w-[60px]">DeepSeek</span>
+                    <span class="font-outfit font-semibold text-[#6F7785]">18%</span>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#FDAA1D]"></span>
+                    <span class="w-[60px]">其他/Kimi</span>
+                    <span class="font-outfit font-semibold text-[#6F7785]">12%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Top Risk Users (Compliance list table) -->
+          <div class="bg-white border border-[#E1E5EB] rounded-[2px] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+            <h3 class="text-xs font-semibold text-[#2F3540] mb-3">Top 5 敏感信息高频输入嫌疑终端</h3>
+            <table class="sd-table w-full">
+              <thead>
+                <tr>
+                  <th class="w-[40px] text-center">排名</th>
+                  <th>终端名称</th>
+                  <th>归属员工</th>
+                  <th>主要应用</th>
+                  <th>近24h敏感匹配数</th>
+                  <th>风险等级</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="text-center font-semibold font-outfit text-red-600">1</td>
+                  <td>LAPTOP-DEV-010</td>
+                  <td>
+                    <div class="flex items-center gap-2">
+                      <span class="w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center text-[10px] text-orange-600 font-semibold">W</span>
+                      <span>王磊 (架构部)</span>
+                    </div>
+                  </td>
+                  <td>Claude Desktop (未隔离)</td>
+                  <td class="font-outfit text-red-600 font-semibold">124 次</td>
+                  <td><span class="px-1.5 py-0.5 rounded-[2px] bg-[#FFF2F2] text-[#CF171D] font-semibold text-[11px]">极高</span></td>
+                  <td><a href="javascript:void(0)" onclick="showToast('正在载入审计日志...')" class="action-link text-xs font-medium">审计日志</a></td>
+                </tr>
+                <tr>
+                  <td class="text-center font-semibold font-outfit text-orange-500">2</td>
+                  <td>MACBOOK-FIN-88</td>
+                  <td>
+                    <div class="flex items-center gap-2">
+                      <span class="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-[10px] text-blue-600 font-semibold">Z</span>
+                      <span>张莉 (财务主管)</span>
+                    </div>
+                  </td>
+                  <td>Kimi Chat (本地)</td>
+                  <td class="font-outfit text-orange-600 font-semibold">89 次</td>
+                  <td><span class="px-1.5 py-0.5 rounded-[2px] bg-[#FFF2F2] text-[#CF171D] font-semibold text-[11px]">极高</span></td>
+                  <td><a href="javascript:void(0)" onclick="showToast('正在载入审计日志...')" class="action-link text-xs font-medium">审计日志</a></td>
+                </tr>
+                <tr>
+                  <td class="text-center font-semibold font-outfit text-orange-500">3</td>
+                  <td>MACBOOK-RND-43</td>
+                  <td>
+                    <div class="flex items-center gap-2">
+                      <span class="w-5 h-5 rounded-full bg-purple-100 flex items-center justify-center text-[10px] text-purple-600 font-semibold">X</span>
+                      <span>肖军 (安全研发)</span>
+                    </div>
+                  </td>
+                  <td>Open Interpreter</td>
+                  <td class="font-outfit text-[#FA721B] font-semibold">45 次</td>
+                  <td><span class="px-1.5 py-0.5 rounded-[2px] bg-[#FFF3E6] text-[#FA721B] font-semibold text-[11px]">中危</span></td>
+                  <td><a href="javascript:void(0)" onclick="showToast('正在载入审计日志...')" class="action-link text-xs font-medium">审计日志</a></td>
+                </tr>
+                <tr>
+                  <td class="text-center font-outfit text-[#6F7785]">4</td>
+                  <td>LAPTOP-PM-02</td>
+                  <td>
+                    <div class="flex items-center gap-2">
+                      <span class="w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center text-[10px] text-teal-600 font-semibold">L</span>
+                      <span>刘敏 (产品设计)</span>
+                    </div>
+                  </td>
+                  <td>AutoGPT (本地)</td>
+                  <td class="font-outfit font-semibold text-[#FA721B]">36 次</td>
+                  <td><span class="px-1.5 py-0.5 rounded-[2px] bg-[#FFF3E6] text-[#FA721B] font-semibold text-[11px]">中危</span></td>
+                  <td><a href="javascript:void(0)" onclick="showToast('正在载入审计日志...')" class="action-link text-xs font-medium">审计日志</a></td>
+                </tr>
+                <tr>
+                  <td class="text-center font-outfit text-[#6F7785]">5</td>
+                  <td>LAPTOP-QA-15</td>
+                  <td>
+                    <div class="flex items-center gap-2">
+                      <span class="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-[10px] text-gray-600 font-semibold">H</span>
+                      <span>何杰 (品质测试)</span>
+                    </div>
+                  </td>
+                  <td>ChatGPT Web</td>
+                  <td class="font-outfit text-gray-700">12 次</td>
+                  <td><span class="px-1.5 py-0.5 rounded-[2px] bg-gray-100 text-gray-600 text-[11px]">低危</span></td>
+                  <td><a href="javascript:void(0)" onclick="showToast('正在载入审计日志...')" class="action-link text-xs font-medium">审计日志</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- RIGHT DETAIL SLIDE DRAWER (Default Width 800px) -->
+  <div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+  <div class="sd-drawer-container" id="detail-drawer">
+    
+    <!-- Drawer Title Header (48px locked height, horizontal flex with far-right close) -->
+    <div class="h-[48px] min-h-[48px] px-4 flex items-center justify-between select-none">
+      <span class="text-base font-semibold text-[#2F3540]" id="drawer-title-lbl">终端 Agent 详细风险评估</span>
+      <!-- Far-right Close Button -->
+      <button class="w-6 h-6 rounded hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-[#CF171D] transition-colors" onclick="closeDrawer()">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+
+    <!-- Drawer Content Area (scrolls independently, left-right padding 32px) -->
+    <div class="flex-1 overflow-y-auto px-8 py-4 space-y-4">
+      
+      <!-- SeerDesign Detail Overview Card -->
+      <div class="detail-overview-card">
+        <!-- Icon Area (Large 64x64 icon style) -->
+        <div class="card-icon-large text-blue-500 rounded bg-white flex items-center justify-center shadow-sm">
+          <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+        </div>
+        <!-- Card Core Info -->
+        <div class="card-info">
+          <div class="card-name flex items-center">
+            <span id="drawer-terminal-name">LAPTOP-USER01</span>
+            <span class="sd-tag text-[12px] ml-2 px-1.5 py-0.5 rounded-[2px] font-semibold" id="drawer-risk-badge" style="background-color: rgba(207, 23, 29, 0.1); color: #CF171D;">存在威胁</span>
+          </div>
+          <!-- Card Attributes grid -->
+          <div class="card-attrs">
+            <div class="card-attr-item">
+              <span class="card-attr-label">终端所有者:</span>
+              <span class="card-attr-value font-medium" id="drawer-owner-name">张强 (研发部)</span>
+            </div>
+            <div class="card-attr-item">
+              <span class="card-attr-label">终端 IP 地址:</span>
+              <span class="card-attr-value font-outfit" id="drawer-terminal-ip">10.242.12.8</span>
+            </div>
+            <div class="card-attr-item">
+              <span class="card-attr-label">安装 Agent:</span>
+              <span class="card-attr-value font-semibold text-blue-600" id="drawer-agent-type">Claude Desktop</span>
+            </div>
+            <div class="card-attr-item">
+              <span class="card-attr-label">安装路径:</span>
+              <span class="card-attr-value text-gray-500 font-mono text-[11px] truncate w-[200px]" id="drawer-agent-path">C:\Users\zhangqiang\AppData\Local\Programs\Claude\Claude.exe</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Segment Tabs inside Drawer -->
+      <div class="border-b border-[#E1E5EB] flex gap-4 text-xs font-normal">
+        <div class="pb-2 border-b-2 border-[#1C6EFF] text-[#1C6EFF] font-semibold cursor-pointer">风险指标评估</div>
+        <div class="pb-2 text-gray-400 hover:text-gray-600 cursor-pointer" onclick="showToast('正在载入行为日志...')">历史活动审计</div>
+      </div>
+
+      <!-- Assess Details using .sd-form layout rules (Horizontal flex items, 140px fixed label width, 16px gap) -->
+      <div class="sd-form space-y-4">
+        
+        <!-- Form Title Section -->
+        <h4 class="form-section-title form-section-title-blue">Agent 配置合规性评估</h4>
+
+        <div class="grid grid-cols-1 gap-3">
+          <!-- Item 1 (Horizontal structure) -->
+          <div class="flex items-center h-8 gap-4">
+            <span class="text-xs text-[#6F7785] w-[140px] flex-shrink-0 text-left">隔离区沙箱空间运行</span>
+            <div class="flex items-center gap-1.5 flex-1 min-w-0">
+              <span id="drawer-sandbox-status-icon">
+                <!-- Red Cross or Green Check -->
+              </span>
+              <span class="text-xs font-medium" id="drawer-sandbox-status-text">未启用 (在物理主机桌面执行，极易扩散风险)</span>
+            </div>
+          </div>
+          <!-- Item 2 -->
+          <div class="flex items-center h-8 gap-4">
+            <span class="text-xs text-[#6F7785] w-[140px] flex-shrink-0 text-left">公网端口监听暴露态</span>
+            <div class="flex items-center gap-1.5 flex-1 min-w-0">
+              <span id="drawer-pub-expose-icon">
+                <!-- Status icon -->
+              </span>
+              <span class="text-xs font-medium" id="drawer-pub-expose-text">无暴露</span>
+            </div>
+          </div>
+          <!-- Item 3 -->
+          <div class="flex items-center h-8 gap-4">
+            <span class="text-xs text-[#6F7785] w-[140px] flex-shrink-0 text-left">API 安全授权认证</span>
+            <div class="flex items-center gap-1.5 flex-1 min-w-0">
+              <span id="drawer-auth-icon">
+                <!-- Status icon -->
+              </span>
+              <span class="text-xs font-medium" id="drawer-auth-text">未启用密码或 API Key 对接凭证认证</span>
+            </div>
+          </div>
+          <!-- Item 4 -->
+          <div class="flex items-center h-8 gap-4">
+            <span class="text-xs text-[#6F7785] w-[140px] flex-shrink-0 text-left">即时聊天群回复配置</span>
+            <div class="flex items-center gap-1.5 flex-1 min-w-0">
+              <span id="drawer-at-icon">
+                <!-- Status icon -->
+              </span>
+              <span class="text-xs font-medium" id="drawer-at-text">群聊内免 @ 自动回复，可能泄露群对话</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Form Title Section 2 -->
+        <h4 class="form-section-title form-section-title-blue mt-4">组件与扩展工具评估 (MCP/Skills)</h4>
+
+        <!-- Tool risks list -->
+        <div class="bg-gray-50 border border-gray-200 rounded-[2px] p-3 text-xs space-y-2">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#CF171D]"></span>
+              <span class="font-semibold text-[#2F3540]">恶意插件检测：</span>
+              <span class="text-[#CF171D] font-mono" id="drawer-malicious-tool-name">恶意 MCP: FileStealer</span>
+            </div>
+            <span class="px-1.5 py-0.5 rounded-[2px] bg-[#FFF2F2] text-[#CF171D] font-outfit font-semibold text-[10px]" style="background-color: rgba(207, 23, 29, 0.1);">高危级别</span>
+          </div>
+          <p class="text-[#6F7785] pl-3 leading-relaxed" id="drawer-malicious-tool-desc">
+            该 MCP 服务具有遍历用户驱动器、并将提取敏感文件（如 SSH keys、明文密码和项目源码）打包外发的风险代码，可能通过非官方应用市场直接下挂加载。
+          </p>
+        </div>
+
+        <div class="bg-gray-50 border border-gray-200 rounded-[2px] p-3 text-xs space-y-1">
+          <span class="font-semibold text-[#2F3540]">沙箱部署建议</span>
+          <p class="text-[#6F7785] leading-relaxed">
+            建议将该 Agent （<span id="drawer-agent-type-suggest">Claude Desktop</span>）直接迁入云端 AgentSpace 安全独立隔离区，或强制在终端本地虚拟机/沙箱环境下运行，屏蔽未授权目录的文件直读和底层 Shell 执行接口。
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Drawer Footer (56px high, Left aligned buttons, 14px text as per spec, NO red action buttons) -->
+    <div class="h-[56px] min-h-[56px] px-4 flex items-center gap-2 border-t border-gray-100 flex-shrink-0 select-none">
+      <button class="sd-btn sd-btn-primary text-sm" id="btn-drawer-sandbox" onclick="remedyDrawerRow('sandbox')">一键沙箱化部署</button>
+      <button class="sd-btn sd-btn-default text-sm text-[#CF171D] hover:text-[#82010E] transition-colors" id="btn-drawer-isolate" onclick="remedyDrawerRow('isolate')">一键隔离终端</button>
+      <button class="sd-btn sd-btn-default text-sm ml-auto" onclick="closeDrawer()">忽略风险</button>
+    </div>
+
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- INLINE MOCK JS IMPLEMENTATION FOR DYNAMIC ACTIONS -->
+  <script>
+    // Data list representing current enterprise agent configuration/threats
+    const mockData = [
+      {
+        id: 1,
+        agent: 'Claude Desktop',
+        terminal: 'LAPTOP-USER01',
+        owner: '张强 (研发部)',
+        ip: '10.242.12.8',
+        env: '本地桌面',
+        configRisks: ['未启用认证', '群聊回复免@'],
+        toolRisks: ['恶意 MCP: FileStealer'],
+        hasRisk: true,
+        avatarColor: 'bg-blue-100 text-blue-600',
+        avatarChar: 'Z',
+        path: 'C:\\Users\\zhangqiang\\AppData\\Local\\Programs\\Claude\\Claude.exe',
+        sandbox: false,
+        pubExpose: false,
+        auth: false,
+        atReplyNo: true,
+        toolDesc: '通过加载第三方不合规 MCP 服务器，可自动扫描并搜集系统中的 .ssh/id_rsa, .gitconfig 等密钥和配置，并静默回传给开发接口。'
+      },
+      {
+        id: 2,
+        agent: 'Nanobots',
+        terminal: 'MACBOOK-PRO-99',
+        owner: '李芳 (财务部)',
+        ip: '10.242.2.45',
+        env: '本地桌面',
+        configRisks: ['公网暴露', '未在沙箱运行'],
+        toolRisks: ['无'],
+        hasRisk: true,
+        avatarColor: 'bg-emerald-100 text-emerald-600',
+        avatarChar: 'L',
+        path: '/Applications/Nanobots.app/Contents/MacOS/Nanobots',
+        sandbox: false,
+        pubExpose: true,
+        auth: true,
+        atReplyNo: false,
+        toolDesc: '无工具层面风险。但本地配置存在外部直接映射，无防火墙限制，极易造成未受信任的网络劫持。'
+      },
+      {
+        id: 3,
+        agent: 'Open Interpreter',
+        terminal: 'DEV-SRV-04',
+        owner: '王明 (运维开发)',
+        ip: '10.242.15.110',
+        env: 'AgentSpace 沙箱',
+        configRisks: ['无'],
+        toolRisks: ['恶意 Skill: ShellExec'],
+        hasRisk: true,
+        avatarColor: 'bg-purple-100 text-purple-600',
+        avatarChar: 'W',
+        path: '/usr/local/bin/interpreter',
+        sandbox: true,
+        pubExpose: false,
+        auth: true,
+        atReplyNo: false,
+        toolDesc: '包含能执行任意 OS 命令的恶意 Skill，由于已运行在 SASE AgentSpace 托管隔离沙箱中，恶意 shell 行为已被完美防御和截断。'
+      },
+      {
+        id: 4,
+        agent: 'AutoGPT',
+        terminal: 'DEV-PC-18',
+        owner: '周梅 (测试组)',
+        ip: '10.242.4.112',
+        env: '本地桌面',
+        configRisks: ['未启用认证', '公网暴露'],
+        toolRisks: ['恶意 Skill: CredsHarvester'],
+        hasRisk: true,
+        avatarColor: 'bg-rose-100 text-rose-600',
+        avatarChar: 'Z',
+        path: 'D:\\Programs\\AutoGPT\\run.bat',
+        sandbox: false,
+        pubExpose: true,
+        auth: false,
+        atReplyNo: false,
+        toolDesc: '该 Agent 的自主模式已被激活且未设定接口授权，可扫描用户浏览器的密钥并向外发布漏洞探针。'
+      },
+      {
+        id: 5,
+        agent: 'Copilot Workspace',
+        terminal: 'LAPTOP-DESK-42',
+        owner: '陈刚 (产品部)',
+        ip: '10.242.8.99',
+        env: '本地桌面',
+        configRisks: ['未在沙箱运行'],
+        toolRisks: ['无'],
+        hasRisk: true,
+        avatarColor: 'bg-amber-100 text-amber-600',
+        avatarChar: 'C',
+        path: 'C:\\Users\\chengang\\AppData\\Local\\Programs\\Copilot\\Workspace.exe',
+        sandbox: false,
+        pubExpose: false,
+        auth: true,
+        atReplyNo: false,
+        toolDesc: '仅处于非受控主机环境上，当前无特定恶意插件，建议隔离。'
+      },
+      {
+        id: 6,
+        agent: 'Claude Desktop',
+        terminal: 'MACBOOK-AIR-15',
+        owner: '赵勇 (安全分析)',
+        ip: '10.242.1.20',
+        env: 'AgentSpace 沙箱',
+        configRisks: ['无'],
+        toolRisks: ['无'],
+        hasRisk: false,
+        avatarColor: 'bg-teal-100 text-teal-600',
+        avatarChar: 'Z',
+        path: '/Applications/Claude.app/Contents/MacOS/Claude',
+        sandbox: true,
+        pubExpose: false,
+        auth: true,
+        atReplyNo: false,
+        toolDesc: '无配置风险与工具层面安全威胁，处于受信任环境。'
+      }
+    ];
+
+    let currentData = [...mockData];
+    let selectedRowId = null;
+
+    // Render Table Rows dynamically
+    function renderTable() {
+      const tbody = document.getElementById('table-body');
+      tbody.innerHTML = '';
+
+      if (currentData.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="10" class="text-center text-[#A1A7B3] py-8">未匹配到符合过滤条件的 Agent 数据</td>
+          </tr>
+        `;
+        return;
+      }
+
+      currentData.forEach((row, index) => {
+        // Build tag badges (Conform to 10% background opacity as per comp-tag.md)
+        let configTags = '';
+        if (row.configRisks.includes('无')) {
+          configTags = `<span class="px-1.5 py-0.5 rounded-[2px] text-[#12A679] text-[11px] font-normal inline-block" style="background-color: rgba(18, 166, 121, 0.1);">无</span>`;
+        } else {
+          configTags = `<div class="flex flex-wrap gap-x-1 gap-y-[2px]">${row.configRisks.map(r => 
+            `<span class="px-1.5 py-0.5 rounded-[2px] text-[#FA721B] text-[11px] inline-block" style="background-color: rgba(250, 114, 27, 0.1);">${r}</span>`
+          ).join('')}</div>`;
+        }
+
+        let toolTags = '';
+        if (row.toolRisks.includes('无')) {
+          toolTags = `<span class="text-[#A1A7B3]">-</span>`;
+        } else {
+          toolTags = `<div class="flex flex-wrap gap-x-1 gap-y-[2px]">${row.toolRisks.map(t => 
+            `<span class="px-1.5 py-0.5 rounded-[2px] text-[#CF171D] text-[11px] font-mono inline-block" style="background-color: rgba(207, 23, 29, 0.1);">${t}</span>`
+          ).join('')}</div>`;
+        }
+
+        // Environment Badge (Safe Sandbox has green indicator, Local has grey as per tag spec)
+        let envBadge = '';
+        if (row.env === 'AgentSpace 沙箱') {
+          envBadge = `
+            <span class="px-1.5 py-0.5 rounded-[2px] text-[#12A679] text-[11px] font-normal inline-block" style="background-color: rgba(18, 166, 121, 0.1);">
+              ${row.env}
+            </span>
+          `;
+        } else {
+          envBadge = `
+            <span class="px-1.5 py-0.5 rounded-[2px] text-[#6F7785] text-[11px] font-normal inline-block" style="background-color: rgba(111, 119, 133, 0.1);">
+              ${row.env}
+            </span>
+          `;
+        }
+
+        tbody.innerHTML += `
+          <tr class="hover:bg-gray-50/50">
+            <td class="w-10 min-w-[40px] text-center font-outfit text-gray-500">${index + 1}</td>
+            <td class="min-w-[120px] font-medium text-[#2F3540]">
+              <div class="flex items-center gap-2">
+                <span class="w-5 h-5 rounded-[2px] bg-blue-50 flex items-center justify-center text-[10px] text-blue-600 font-bold border border-blue-200">
+                  ${row.agent.substring(0, 2).toUpperCase()}
+                </span>
+                <span>${row.agent}</span>
+              </div>
+            </td>
+            <td class="min-w-[160px]">${row.terminal}</td>
+            <td class="min-w-[140px]">
+              <div class="flex items-center gap-1.5">
+                <span class="w-5 h-5 rounded-full ${row.avatarColor} flex items-center justify-center text-[10px] font-semibold">
+                  ${row.avatarChar}
+                </span>
+                <span>${row.owner}</span>
+              </div>
+            </td>
+            <td class="min-w-[120px] font-outfit text-[#2F3540]">${row.ip}</td>
+            <td class="min-w-[160px]">${envBadge}</td>
+            <td class="min-w-[200px]">${configTags}</td>
+            <td class="min-w-[200px]">${toolTags}</td>
+            <td class="w-[120px] min-w-[120px] sticky-op-col">
+              <a href="javascript:void(0)" onclick="openDetailDrawer(${row.id})" class="action-link text-xs font-medium">详情</a>
+            </td>
+            <td class="w-10 min-w-[40px] sticky-more-col"></td>
+          </tr>
+        `;
+      });
+    }
+
+    // Toggle Sidebar Level 1 Menus (Exclusive unfold logic)
+    function toggleMenu(menuKey) {
+      const activeKeys = ['overview', 'log-center', 'ztna', 'genai-protect', 'dlp', 'internet-sec', 'identity-mgmt', 'endpoint-mgmt'];
+      
+      activeKeys.forEach(key => {
+        const sub = document.getElementById(`sub-${key}`);
+        const arrow = document.getElementById(`arrow-${key}`);
+        
+        if (key === menuKey) {
+          if (sub.classList.contains('hidden')) {
+            sub.classList.remove('hidden');
+            sub.style.maxHeight = "500px";
+            if (arrow) arrow.classList.add('rotate-180');
+          } else {
+            sub.classList.add('hidden');
+            sub.style.maxHeight = "0px";
+            if (arrow) arrow.classList.remove('rotate-180');
+          }
+        } else {
+          // Exclude other level-1 lists
+          if (sub && !sub.classList.contains('hidden')) {
+            sub.classList.add('hidden');
+            sub.style.maxHeight = "0px";
+            if (arrow) arrow.classList.remove('rotate-180');
+          }
+        }
+      });
+    }
+
+    // Toggle Dropdown Options
+    function toggleSelectDropdown(dropdownId) {
+      const dropdown = document.getElementById(dropdownId);
+      const targetWrapperId = dropdownId === 'dropdown-env' ? 'filter-env-wrapper' : 'filter-risk-wrapper';
+      const targetWrapper = document.getElementById(targetWrapperId);
+      
+      if (dropdown.classList.contains('hidden')) {
+        // Close other dropdowns first
+        document.getElementById('dropdown-env').classList.add('hidden');
+        document.getElementById('dropdown-risk').classList.add('hidden');
+        document.getElementById('filter-env-wrapper').classList.remove('sd-select-focused');
+        document.getElementById('filter-risk-wrapper').classList.remove('sd-select-focused');
+        
+        dropdown.classList.remove('hidden');
+        targetWrapper.classList.add('sd-select-focused');
+      } else {
+        dropdown.classList.add('hidden');
+        targetWrapper.classList.remove('sd-select-focused');
+      }
+    }
+
+    // Select Filter option
+    let activeEnv = '全部';
+    let activeRisk = '全部';
+
+    function selectFilter(type, value) {
+      const wrapperId = type === 'env' ? 'filter-env-wrapper' : 'filter-risk-wrapper';
+      const dropdownId = type === 'env' ? 'dropdown-env' : 'dropdown-risk';
+      const wrapper = document.getElementById(wrapperId);
+      const dropdown = document.getElementById(dropdownId);
+      
+      if (type === 'env') {
+        activeEnv = value;
+        document.getElementById('selected-env').innerText = `运行环境: ${value}`;
+      } else if (type === 'risk') {
+        activeRisk = value;
+        document.getElementById('selected-risk').innerText = `风险级别: ${value}`;
+      }
+      
+      // Update selected class in dropdown list
+      const items = dropdown.querySelectorAll('.sd-select-item');
+      items.forEach(item => {
+        if (item.getAttribute('onclick').includes(`'${value}'`)) {
+          item.classList.add('sd-select-item-selected');
+        } else {
+          item.classList.remove('sd-select-item-selected');
+        }
+      });
+
+      dropdown.classList.add('hidden');
+      wrapper.classList.remove('sd-select-focused');
+      applyFilters();
+    }
+
+    // Apply Filter and Search terms
+    function applyFilters() {
+      const searchTerm = document.getElementById('search-input').value.toLowerCase();
+
+      currentData = mockData.filter(row => {
+        const matchSearch = row.terminal.toLowerCase().includes(searchTerm) || 
+                            row.owner.toLowerCase().includes(searchTerm) || 
+                            row.ip.includes(searchTerm) ||
+                            row.agent.toLowerCase().includes(searchTerm);
+        
+        let matchEnv = true;
+        if (activeEnv !== '全部') {
+          matchEnv = row.env === activeEnv;
+        }
+
+        let matchRisk = true;
+        if (activeRisk === '存在风险') {
+          matchRisk = row.hasRisk === true;
+        } else if (activeRisk === '无风险') {
+          matchRisk = row.hasRisk === false;
+        }
+
+        return matchSearch && matchEnv && matchRisk;
+      });
+
+      renderTable();
+    }
+
+    // Search bar input (controls X clear button visibility dynamically as per spec)
+    function handleSearch() {
+      const val = document.getElementById('search-input').value;
+      const clearBtn = document.getElementById('search-clear-btn');
+      if (val.length > 0) {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+      applyFilters();
+    }
+
+    // Clear search bar
+    function clearSearch() {
+      document.getElementById('search-input').value = '';
+      document.getElementById('search-clear-btn').classList.add('hidden');
+      applyFilters();
+    }
+
+    // Page Jumper logic
+    function handlePageJump(e) {
+      if (e.key === 'Enter') {
+        const val = parseInt(e.target.value);
+        if (val >= 1 && val <= 5) {
+          showToast(`已跳至第 ${val} 页`);
+        } else {
+          showToast('页码超出合理范围');
+        }
+      }
+    }
+
+    // Switch View Top tabs
+    function switchView(viewName) {
+      const visibleView = document.getElementById('view-visible');
+      const analysisView = document.getElementById('view-analysis');
+      const tabVisible = document.getElementById('tab-btn-visible');
+      const tabAnalysis = document.getElementById('tab-btn-analysis');
+
+      if (viewName === 'visible') {
+        visibleView.classList.remove('hidden');
+        analysisView.classList.add('hidden');
+        tabVisible.classList.add('active');
+        tabAnalysis.classList.remove('active');
+      } else {
+        visibleView.classList.add('hidden');
+        analysisView.classList.remove('hidden');
+        tabVisible.classList.remove('active');
+        tabAnalysis.classList.add('active');
+      }
+    }
+
+    // Open Detail Drawer & Interpolate content dynamically
+    function openDetailDrawer(rowId) {
+      const row = mockData.find(d => d.id === rowId);
+      if (!row) return;
+
+      selectedRowId = rowId;
+
+      // Populate text details
+      document.getElementById('drawer-terminal-name').innerText = row.terminal;
+      document.getElementById('drawer-owner-name').innerText = row.owner;
+      document.getElementById('drawer-terminal-ip').innerText = row.ip;
+      document.getElementById('drawer-agent-type').innerText = row.agent;
+      document.getElementById('drawer-agent-type-suggest').innerText = row.agent;
+      document.getElementById('drawer-agent-path').innerText = row.path;
+
+      // Risk level indicator (using SeerDesign standard light tag background opacities)
+      const riskBadge = document.getElementById('drawer-risk-badge');
+      if (row.hasRisk) {
+        riskBadge.innerText = '存在威胁';
+        riskBadge.style.backgroundColor = 'rgba(207, 23, 29, 0.1)';
+        riskBadge.style.color = '#CF171D';
+      } else {
+        riskBadge.innerText = '合规安全';
+        riskBadge.style.backgroundColor = 'rgba(18, 166, 121, 0.1)';
+        riskBadge.style.color = '#12A679';
+      }
+
+      // Checkbox evaluation states icons mapping (svg paths)
+      const successIcon = `
+        <svg class="w-4 h-4 text-[#12A679] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+      `;
+      const warningIcon = `
+        <svg class="w-4 h-4 text-[#FA721B] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+      `;
+      const errorIcon = `
+        <svg class="w-4 h-4 text-[#CF171D] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+      `;
+
+      // 1. Sandbox Status
+      const sandboxIcon = document.getElementById('drawer-sandbox-status-icon');
+      const sandboxText = document.getElementById('drawer-sandbox-status-text');
+      if (row.sandbox) {
+        sandboxIcon.innerHTML = successIcon;
+        sandboxText.innerText = '受托管保护 (已运行在 SASE AgentSpace 沙箱中)';
+        sandboxText.className = 'text-xs font-medium text-[#12A679]';
+      } else {
+        sandboxIcon.innerHTML = errorIcon;
+        sandboxText.innerText = '未启用保护 (在本地主机物理磁盘运行)';
+        sandboxText.className = 'text-xs font-medium text-[#CF171D]';
+      }
+
+      // 2. Public Exposure
+      const pubIcon = document.getElementById('drawer-pub-expose-icon');
+      const pubText = document.getElementById('drawer-pub-expose-text');
+      if (row.pubExpose) {
+        pubIcon.innerHTML = warningIcon;
+        pubText.innerText = '检测到公网端口开放监听';
+        pubText.className = 'text-xs font-medium text-[#FA721B]';
+      } else {
+        pubIcon.innerHTML = successIcon;
+        pubText.innerText = '内网独立运行';
+        pubText.className = 'text-xs font-medium text-[#12A679]';
+      }
+
+      // 3. API Auth
+      const authIcon = document.getElementById('drawer-auth-icon');
+      const authText = document.getElementById('drawer-auth-text');
+      if (row.auth) {
+        authIcon.innerHTML = successIcon;
+        authText.innerText = '已配置 API Key 强安全认证';
+        authText.className = 'text-xs font-medium text-[#12A679]';
+      } else {
+        authIcon.innerHTML = warningIcon;
+        authText.innerText = '未启用强认证机制';
+        authText.className = 'text-xs font-medium text-[#FA721B]';
+      }
+
+      // 4. At Reply
+      const atIcon = document.getElementById('drawer-at-icon');
+      const atText = document.getElementById('drawer-at-text');
+      if (row.atReplyNo) {
+        atIcon.innerHTML = warningIcon;
+        atText.innerText = '开启了群聊免 @ 自动回复';
+        atText.className = 'text-xs font-medium text-[#FA721B]';
+      } else {
+        atIcon.innerHTML = successIcon;
+        atText.innerText = '群聊交互需明确 @ 校验';
+        atText.className = 'text-xs font-medium text-[#12A679]';
+      }
+
+      // Malicious tool/plugin evaluation
+      const maliciousName = document.getElementById('drawer-malicious-tool-name');
+      const maliciousDesc = document.getElementById('drawer-malicious-tool-desc');
+      if (row.toolRisks[0] !== '无') {
+        maliciousName.innerText = row.toolRisks[0];
+        maliciousDesc.innerText = row.toolDesc;
+        maliciousName.parentElement.parentElement.classList.remove('hidden');
+      } else {
+        maliciousName.innerText = '无';
+        maliciousDesc.innerText = '暂未在该终端上检测到可疑或带有攻击倾向的 Agent Skills 插件、MCP 工具包。';
+        maliciousName.parentElement.parentElement.classList.add('hidden');
+      }
+
+      // Action Buttons state in drawer
+      const btnSandbox = document.getElementById('btn-drawer-sandbox');
+      const btnIsolate = document.getElementById('btn-drawer-isolate');
+      if (row.sandbox) {
+        btnSandbox.classList.add('hidden');
+      } else {
+        btnSandbox.classList.remove('hidden');
+      }
+
+      if (row.hasRisk) {
+        btnIsolate.classList.remove('hidden');
+      } else {
+        btnIsolate.classList.add('hidden');
+      }
+
+      // Slide in
+      document.getElementById('drawer-overlay').classList.add('open');
+      document.getElementById('detail-drawer').classList.add('open');
+    }
+
+    // Close Detail Drawer
+    function closeDrawer() {
+      document.getElementById('drawer-overlay').classList.remove('open');
+      document.getElementById('detail-drawer').classList.remove('open');
+      selectedRowId = null;
+    }
+
+    // Dismiss Alert
+    function dismissAlert(alertId) {
+      document.getElementById(alertId).classList.add('hidden');
+    }
+
+    // Custom Toast Notification System
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      
+      let iconColor = 'text-green-500';
+      let icon = `
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      `;
+
+      if (type === 'warning') {
+        iconColor = 'text-[#FA721B]';
+        icon = `
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        `;
+      } else if (type === 'error') {
+        iconColor = 'text-[#CF171D]';
+        icon = `
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        `;
+      }
+
+      toast.className = 'sd-message-notice flex items-center bg-white shadow-lg border border-gray-100 py-2.5 px-4 rounded-[2px] translate-y-[-10px] opacity-0 transition-all duration-300';
+      toast.innerHTML = `
+        <span class="${iconColor} mr-2">${icon}</span>
+        <span class="text-xs text-[#2F3540] font-medium">${message}</span>
+      `;
+
+      container.appendChild(toast);
+      
+      // Trigger animation
+      setTimeout(() => {
+        toast.style.transform = 'translateY(0)';
+        toast.style.opacity = '1';
+      }, 50);
+
+      // Auto dismiss
+      setTimeout(() => {
+        toast.style.transform = 'translateY(-10px)';
+        toast.style.opacity = '0';
+        setTimeout(() => {
+          container.removeChild(toast);
+        }, 300);
+      }, 3000);
+    }
+
+    // Remedy single row from drawer
+    function remedyDrawerRow(actionType) {
+      if (!selectedRowId) return;
+      
+      const row = mockData.find(d => d.id === selectedRowId);
+      if (!row) return;
+
+      if (actionType === 'sandbox') {
+        row.sandbox = true;
+        row.env = 'AgentSpace 沙箱';
+        row.configRisks = ['无'];
+        showToast(`终端 [${row.terminal}] 的 Agent 已成功部署在 AgentSpace 安全沙箱中运行！`);
+      } else if (actionType === 'isolate') {
+        row.sandbox = true;
+        row.env = 'AgentSpace 沙箱';
+        row.configRisks = ['无'];
+        row.toolRisks = ['无'];
+        row.hasRisk = false;
+        showToast(`对终端 [${row.terminal}] 隔离并修复恶意 Skill 成功！`);
+      }
+
+      applyFilters();
+      closeDrawer();
+    }
+
+    // Batch remedy action
+    function executeBatchRemediation() {
+      let count = 0;
+      mockData.forEach(row => {
+        if (!row.sandbox) {
+          row.sandbox = true;
+          row.env = 'AgentSpace 沙箱';
+          row.configRisks = ['无'];
+          if (row.toolRisks[0] !== '无') {
+            row.toolRisks = ['无'];
+            row.hasRisk = false;
+          }
+          count++;
+        }
+      });
+      if (count > 0) {
+        showToast(`一键处置成功：已将 ${count} 个高危 Agent 批量部署在安全隔离沙箱！`);
+      } else {
+        showToast('当前所有 Agent 终端已均在安全沙箱内托管。');
+      }
+      dismissAlert('risk-banner');
+      applyFilters();
+    }
+
+    // Close Dropdowns on outside click
+    document.addEventListener('click', function(e) {
+      const filterEnv = document.getElementById('filter-env-wrapper');
+      const filterRisk = document.getElementById('filter-risk-wrapper');
+      
+      if (filterEnv && !filterEnv.contains(e.target)) {
+        document.getElementById('dropdown-env').classList.add('hidden');
+        filterEnv.classList.remove('sd-select-focused');
+      }
+      if (filterRisk && !filterRisk.contains(e.target)) {
+        document.getElementById('dropdown-risk').classList.add('hidden');
+        filterRisk.classList.remove('sd-select-focused');
+      }
+    });
+
+    // Initialize Table
+    window.onload = function() {
+      renderTable();
+    };
+  </script>
+</body>
+</html>

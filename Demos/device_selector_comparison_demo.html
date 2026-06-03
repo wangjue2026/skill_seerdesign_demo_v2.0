@@ -1,0 +1,2656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>设备选择器对比测试 Demo - SeerDesign</title>
+
+  <!-- 引入 Google Fonts 字体库 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- 引入 SeerDesign 全局样式与覆盖类名 -->
+  <link rel="stylesheet" href="../assets/css-overrides.css">
+
+  <!-- 引入 Alpine.js 用于交互渲染 -->
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
+  <!-- 引入 Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'PingFang SC', 'sans-serif'],
+            outfit: ['Outfit', 'sans-serif'],
+          },
+          fontSize: {
+            'xs': ['12px', '20px'],   // 字号 12px, 行高 20px
+            'md': ['14px', '22px'],   // 字号 14px, 行高 22px
+            'lg': ['16px', '24px'],   // 字号 16px, 行高 24px
+            'xl': ['20px', '28px'],
+          },
+          borderRadius: {
+            'control': '2px',         // 控件圆角 2px
+            'container': '4px',       // 容器卡片圆角 4px
+            'table': '0px',           // 表格直角
+          },
+          spacing: {
+            '0.5': '2px',
+            '1': '4px',
+            '2': '8px',
+            '3': '12px',
+            '4': '16px',
+            '6': '24px',
+            '8': '32px',
+          },
+          colors: {
+            brand: {
+              DEFAULT: 'var(--color-blue)',      // 品牌蓝 #1C6EFF
+              hover: 'var(--color-blue-l10)',    // 悬浮蓝 #4FA1FF
+              active: 'var(--color-blue-d10)',   // 点击蓝 #1458CC
+              lightBg: 'var(--color-blue-l50)',  // 选中浅蓝背景 #E8F4FF
+            },
+            risk: 'var(--color-red)',            // #F52727
+            warning: 'var(--color-orange)',      // #FA721B
+            text: {
+              DEFAULT: 'var(--color-graphite-d40)', // 正文 #2F3540
+              title: 'var(--color-graphite-d30)',   // 标题 #454C59
+              mute: 'var(--color-graphite)',        // 辅助色 #A1A7B3
+            },
+            border: 'var(--color-graphite-l20)',    // 一级边框 #D3D7DE
+            bg: {
+              light: 'var(--color-graphite-l50)',   // 浅底背景 #F7F9FC
+              line: 'var(--color-graphite-l30)',    // 分割线 #E1E5EB
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* ========================================================
+       1. 侧边栏及树型导航菜单特定样式 (SASE / XDR / DR 风格)
+       ======================================================== */
+    .tree-sidebar {
+      background-color: #272E38;
+      font-family: var(--seer-font-family);
+    }
+    .tree-menu-group-title {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--color-graphite);
+      padding: 8px 16px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      user-select: none;
+    }
+    .tree-menu-item-l1 {
+      height: 40px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 400;
+      color: #FFFFFF;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .tree-menu-item-l1:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+    .tree-menu-item-l1.parent-active {
+      background-color: #1E232B;
+    }
+    .tree-menu-item-l1.parent-active .menu-icon {
+      color: var(--color-blue) !important;
+    }
+    .tree-menu-item-l2 {
+      height: 36px;
+      padding: 0 16px 0 40px;
+      display: flex;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 400;
+      color: #FFFFFF;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .tree-menu-item-l2:hover {
+      background-color: rgba(255, 255, 255, 0.03);
+    }
+    .tree-menu-item-l2.selected {
+      background: linear-gradient(90deg, rgba(28, 110, 255, 0.2) 0%, rgba(28, 110, 255, 0) 100%);
+      font-weight: 600;
+    }
+    .tree-menu-item-l2.selected::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background-color: var(--color-blue);
+      z-index: 10;
+    }
+    .tree-menu-item-l2.selected .menu-dot {
+      background-color: #4BFFC6 !important;
+      box-shadow: 0 0 4px rgba(75, 255, 198, 0.6);
+    }
+    .menu-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background-color: #FFFFFF;
+      margin-right: 8px;
+      transition: all 0.2s;
+    }
+    .tree-submenu {
+      background-color: #1E232B;
+      overflow: hidden;
+      transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ========================================================
+       2. 标题栏 Tabs 选中态下划线对齐样式
+       ======================================================== */
+    .page-title-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; 
+      left: 16px; 
+      right: 16px;
+      height: 2px;
+      background-color: var(--color-blue);
+      border-radius: 2px 2px 0 0;
+    }
+
+    /* 滚动条样式美化 */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: rgba(120, 130, 145, 0.3);
+      border-radius: 3px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    /* Tooltip 样式优化 */
+    .group\/tooltip:hover .tooltip-panel {
+      display: block;
+    }
+  </style>
+</head>
+
+<body class="bg-bg-light text-text font-sans overflow-hidden w-screen h-screen">
+
+  <!-- 顶层 Alpine.js 状态管理容器 -->
+  <div class="flex w-full h-full" x-data="pageState()">
+
+    <!-- 1. 左侧树型导航栏 -->
+    <div class="tree-sidebar flex flex-col flex-shrink-0 text-white select-none transition-all duration-300"
+         :class="sidebarFold ? 'w-[56px]' : 'w-[240px]'">
+      
+      <!-- 1.1 系统 Logo 栏 (高度 56px) -->
+      <div class="h-[56px] px-2 flex items-center border-b border-[#363f4b] flex-shrink-0 overflow-hidden">
+        <div class="w-8 h-8 rounded-control ml-2 flex items-center justify-center flex-shrink-0 font-bold text-xs tracking-wide text-white" 
+             style="background: linear-gradient(135deg, #4BFFC6, #1C6EFF);">
+          SD
+        </div>
+        <span class="ml-2 text-xs font-semibold tracking-wide truncate transition-opacity duration-300" 
+              :class="sidebarFold ? 'opacity-0 w-0' : 'opacity-100'">
+          云安全访问服务
+        </span>
+        <!-- 折叠/展开按钮 -->
+        <button class="ml-auto mr-1 w-6 h-6 rounded hover:bg-white/10 flex items-center justify-center text-text-mute hover:text-white transition-colors"
+                @click="sidebarFold = !sidebarFold">
+          <svg class="w-4 h-4 transform transition-transform" :class="sidebarFold && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- 1.2 滚动菜单项列表 -->
+      <div class="flex-1 overflow-y-auto py-3">
+        <div class="tree-menu-group-title transition-opacity duration-200" x-show="!sidebarFold">功能演示</div>
+        
+        <div class="tree-menu-item-l1" :class="submenuOpen && 'parent-active'" @click="submenuOpen = !submenuOpen">
+          <span class="w-4 h-4 mr-2 text-text-mute menu-icon flex-shrink-0">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+          </span>
+          <span x-show="!sidebarFold" class="truncate">策略配置</span>
+          <svg x-show="!sidebarFold" class="w-3 h-3 ml-auto text-text-mute transform transition-transform duration-200" :class="submenuOpen && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+
+        <div class="tree-submenu" x-show="submenuOpen && !sidebarFold" x-transition.scale.origin.top>
+          <div class="tree-menu-item-l2 selected">
+            <span class="menu-dot"></span>设备选择器对比
+          </div>
+        </div>
+      </div>
+
+      <!-- 1.3 底部个人中心 -->
+      <div class="h-11 px-4 border-t border-[#363f4b] flex items-center bg-[#212730] flex-shrink-0 relative">
+        <div class="w-5 h-5 rounded-full bg-brand flex items-center justify-center text-[10px] text-white font-semibold flex-shrink-0 cursor-pointer"
+             @click="profileOpen = !profileOpen">
+          U
+        </div>
+        <span class="ml-2 text-xs font-normal text-white/85 truncate" x-show="!sidebarFold">Admin (管理员)</span>
+      </div>
+    </div>
+
+    <!-- 2. 右侧主视图区 -->
+    <div class="flex-1 flex flex-col h-screen overflow-hidden">
+      
+      <!-- 2.1 页面标题栏 (Page Title Bar) -->
+      <div class="h-12 bg-white border-b border-bg-line flex items-center px-4 flex-shrink-0 relative select-none">
+        <span class="text-xs font-semibold text-text-title">策略配置与组件对比</span>
+        <span class="w-[1px] h-4 bg-bg-line mx-3"></span>
+        <div class="flex h-full items-center">
+          <div class="page-title-tab relative h-full flex items-center px-4 text-xs cursor-pointer text-text hover:text-brand transition-colors"
+               :class="activeTab === 'demo' && 'active text-brand font-semibold'"
+               @click="activeTab = 'demo'">
+            对比演示 Demo
+          </div>
+          <div class="page-title-tab relative h-full flex items-center px-4 text-xs cursor-pointer text-text hover:text-brand transition-colors"
+               :class="activeTab === 'spec' && 'active text-brand font-semibold'"
+               @click="activeTab = 'spec'">
+            规范差异说明
+          </div>
+        </div>
+      </div>
+
+      <!-- 2.2 主业务展示区 -->
+      <div class="flex-1 overflow-hidden m-3 flex flex-col min-h-0">
+        
+        <!-- Tab 1: 对比演示 Demo -->
+        <div x-show="activeTab === 'demo'" class="flex-1 flex flex-col overflow-y-auto custom-scrollbar gap-4">
+          
+          <!-- 说明背景卡片 -->
+          <div class="bg-white rounded-container shadow-[0_1px_3px_rgba(0,0,0,0.05)] p-4 flex flex-col shrink-0">
+            <h4 class="text-xs font-semibold text-[#2F3540] mb-1">设计意图与操作指南</h4>
+            <p class="text-[12px] text-[#6F7785] leading-relaxed">
+              此演示页面在同一个安全管理表单中集成了两套不同规范的设备多选器。您可以通过点击两个输入框，分别调出对应的选择弹窗，重点体验它们在
+              <span class="text-brand font-semibold">“左树勾选级联关系”</span>、
+              <span class="text-brand font-semibold">“触发器输入框样式排版”</span> 以及 
+              <span class="text-brand font-semibold">“主备设备联动”</span> 上的细微设计区别。
+            </p>
+          </div>
+
+          <!-- 表单配置卡片 -->
+          <div class="bg-white rounded-container shadow-[0_1px_3px_rgba(0,0,0,0.05)] p-6 flex flex-col flex-1">
+            <h3 class="text-sm font-semibold text-[#2F3540] border-b border-bg-line pb-3 mb-5">新建设备准入安全策略</h3>
+            
+            <form class="space-y-6 max-w-[640px]" @submit.prevent>
+              
+              <!-- 策略名称 -->
+              <div class="flex items-center gap-4">
+                <label class="text-xs text-[#6F7785] w-[72px] text-left font-normal flex-shrink-0">策略名称</label>
+                <input type="text" x-model="policyName" class="flex-1 h-[32px] px-3 border border-[#D3D7DE] rounded-control focus:border-[#1C6EFF] outline-none text-xs text-[#2F3540] transition-colors" />
+              </div>
+
+              <!-- 控制动作 -->
+              <div class="flex items-center gap-4">
+                <label class="text-xs text-[#6F7785] w-[72px] text-left font-normal flex-shrink-0">控制动作</label>
+                <div class="flex items-center gap-6">
+                  <label class="flex items-center gap-1.5 cursor-pointer text-xs text-[#2F3540]">
+                    <input type="radio" name="action" value="allow" x-model="policyAction" class="accent-brand" /> 允许
+                  </label>
+                  <label class="flex items-center gap-1.5 cursor-pointer text-xs text-[#2F3540]">
+                    <input type="radio" name="action" value="audit" x-model="policyAction" class="accent-brand" /> 审计
+                  </label>
+                  <label class="flex items-center gap-1.5 cursor-pointer text-xs text-[#2F3540]">
+                    <input type="radio" name="action" value="block" x-model="policyAction" class="accent-brand" /> 阻断
+                  </label>
+                </div>
+              </div>
+
+              <!-- 配置项 1：设备多选-基础版 -->
+              <div class="flex items-center gap-4">
+                <label class="text-xs text-[#6F7785] w-[72px] text-left font-normal flex-shrink-0">选择设备</label>
+                
+                <!-- 触发器配置框 (32px) -->
+                <div class="flex items-center justify-between h-[32px] px-3 border border-[#D3D7DE] rounded-control bg-white cursor-pointer hover:border-[#1C6EFF] transition-colors group flex-1 min-w-0"
+                     @click="basicOpenModal()">
+                  
+                  <!-- 未选中 -->
+                  <span x-show="basicConfirmedResult.deviceIds.length === 0 && basicConfirmedResult.groupIds.length === 0" class="text-xs text-[#A1A7B3]">请选择</span>
+                  
+                  <!-- 已选中：输入框内部直接以逗号分隔展示摘要，无下方灰色框 -->
+                  <span x-show="basicConfirmedResult.deviceIds.length > 0 || basicConfirmedResult.groupIds.length > 0" 
+                        class="text-xs text-[#2F3540] truncate flex-1 min-w-0" 
+                        x-text="basicGetDisplayText()"></span>
+
+                  <!-- 列表图标 -->
+                  <svg class="w-4 h-4 text-[#6F7785] group-hover:text-[#1C6EFF] transition-colors flex-shrink-0 ml-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="8" y1="6" x2="21" y2="6"></line>
+                    <line x1="8" y1="12" x2="21" y2="12"></line>
+                    <line x1="8" y1="18" x2="21" y2="18"></line>
+                    <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                    <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                    <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- 配置项 2：SASE设备选择器 -->
+              <div class="flex items-center gap-4">
+                <label class="text-xs text-[#6F7785] w-[72px] text-left font-normal flex-shrink-0">选择设备</label>
+                
+                <!-- 触发器配置框 (32px) -->
+                <div class="flex items-center justify-between h-[32px] px-3 border border-[#D3D7DE] rounded-control bg-white cursor-pointer hover:border-[#1C6EFF] transition-colors group flex-1 min-w-0"
+                     @click="saseOpenModal()">
+                  
+                  <!-- 未选中 -->
+                  <span x-show="saseConfirmedResult.deviceIds.length === 0 && saseConfirmedResult.groupIds.length === 0" class="text-xs text-[#A1A7B3]">请选择</span>
+                  
+                  <!-- 已选中：输入框内部直接以逗号分隔展示摘要，无下方灰色框 -->
+                  <span x-show="saseConfirmedResult.deviceIds.length > 0 || saseConfirmedResult.groupIds.length > 0" 
+                        class="text-xs text-[#2F3540] truncate flex-1 min-w-0" 
+                        x-text="saseGetDisplayText()"></span>
+
+                  <!-- 列表图标 -->
+                  <svg class="w-4 h-4 text-[#6F7785] group-hover:text-[#1C6EFF] transition-colors flex-shrink-0 ml-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="8" y1="6" x2="21" y2="6"></line>
+                    <line x1="8" y1="12" x2="21" y2="12"></line>
+                    <line x1="8" y1="18" x2="21" y2="18"></line>
+                    <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                    <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                    <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- 提交按钮 -->
+              <div class="flex items-center gap-4 pt-4 border-t border-bg-line">
+                <div class="w-[72px] flex-shrink-0"></div>
+                <button type="submit" class="h-[32px] px-6 text-xs text-white bg-brand hover:bg-brand-hover active:bg-brand-active rounded-control font-medium transition-colors" @click="alert('保存成功！\n设备组1已选 ' + basicGetConfirmedCount() + ' 项。\n设备组2已选 ' + saseGetConfirmedCount() + ' 项。')">
+                  提交配置
+                </button>
+                <button type="button" class="h-[32px] px-6 text-xs text-[#2F3540] border border-[#D3D7DE] hover:border-brand hover:text-brand rounded-control transition-colors bg-white" @click="resetForm()">
+                  重置
+                </button>
+              </div>
+
+            </form>
+          </div>
+
+        </div>
+
+        <!-- Tab 2: 规范差异说明 -->
+        <div x-show="activeTab === 'spec'" class="flex-1 bg-white rounded-container shadow-[0_1px_3px_rgba(0,0,0,0.05)] p-6 overflow-y-auto custom-scrollbar">
+          <h3 class="text-sm font-semibold text-[#2F3540] mb-4">组件核心规范对比表</h3>
+          
+          <table class="w-full border-collapse text-xs">
+            <thead>
+              <tr class="bg-[#EDF1F7] text-[#454C59] border-b border-[#E1E5EB]">
+                <th class="p-3 text-left font-semibold border border-[#E1E5EB] w-[120px]">对比项</th>
+                <th class="p-3 text-left font-semibold border border-[#E1E5EB] w-[320px]">配置项 1：设备多选-基础版 (Device 1)</th>
+                <th class="p-3 text-left font-semibold border border-[#E1E5EB] w-[320px]">配置项 2：SASE设备选择器 (Device 2)</th>
+              </tr>
+            </thead>
+            <tbody class="text-[#2F3540] divide-y divide-[#E1E5EB]">
+              <tr>
+                <td class="p-3 font-semibold bg-[#F7F9FC] border border-[#E1E5EB]">表单标签 (Label)</td>
+                <td class="p-3 border border-[#E1E5EB]">「选择设备」 （字号 12px/400，颜色 `#6F7785`，左对齐）</td>
+                <td class="p-3 border border-[#E1E5EB]">「选择设备」 （字号 12px/400，颜色 `#6F7785`，左对齐）</td>
+              </tr>
+              <tr>
+                <td class="p-3 font-semibold bg-[#F7F9FC] border border-[#E1E5EB]">触发器未选中</td>
+                <td class="p-3 border border-[#E1E5EB]">显示占位符「请选择」，颜色 `#A1A7B3`</td>
+                <td class="p-3 border border-[#E1E5EB]">显示占位符「请选择」，颜色 `#A1A7B3`</td>
+              </tr>
+              <tr>
+                <td class="p-3 font-semibold bg-[#F7F9FC] border border-[#E1E5EB]">触发器选中展示</td>
+                <td class="p-3 border border-[#E1E5EB]">
+                  输入框内部直接展示具体已选摘要文本，超出截断。下方不产生额外容器。
+                </td>
+                <td class="p-3 border border-[#E1E5EB]">
+                  输入框内部直接展示具体已选摘要文本，超出截断。下方不产生额外容器。
+                </td>
+              </tr>
+              <tr>
+                <td class="p-3 font-semibold bg-[#F7F9FC] border border-[#E1E5EB]">左侧分组树勾选联动</td>
+                <td class="p-3 border border-[#E1E5EB]">
+                  级联树内禁用。勾选父分组后，其所有后代分组的复选框被置为未选中，树节点置灰并禁用，提示已被父级选中。
+                </td>
+                <td class="p-3 border border-[#E1E5EB]">
+                  级联树内禁用。勾选父分组后，其所有后代分组的复选框被置为未选中，树节点置灰并禁用，提示已被父级选中。
+                </td>
+              </tr>
+              <tr>
+                <td class="p-3 font-semibold bg-[#F7F9FC] border border-[#E1E5EB]">左树连接线/加减号</td>
+                <td class="p-3 border border-[#E1E5EB]">
+                  严格连线样式。加减号为 16×16px 细边框，根节点背景浅灰。非根叶子节点显示 4×4px 实心小圆点。
+                </td>
+                <td class="p-3 border border-[#E1E5EB]">
+                  严格连线样式。加减号为 16×16px 细边框，根节点背景浅灰。非根叶子节点显示 4×4px 实心小圆点。
+                </td>
+              </tr>
+              <tr>
+                <td class="p-3 font-semibold bg-[#F7F9FC] border border-[#E1E5EB]">设备表格列宽排版</td>
+                <td class="p-3 border border-[#E1E5EB]">
+                  多选框(40px) | 设备名称(200px 固定) | 状态(90px) | 所属分组(flex-1 自适应)
+                </td>
+                <td class="p-3 border border-[#E1E5EB]">
+                  多选框(40px) | 设备名称(200px 固定) | 状态(90px) | 所属分组(flex-1 自适应)
+                </td>
+              </tr>
+              <tr>
+                <td class="p-3 font-semibold bg-[#F7F9FC] border border-[#E1E5EB]">主备设备联动</td>
+                <td class="p-3 border border-[#E1E5EB]">
+                  勾选主/备的任意一台，关联设备同步勾选。备设备拥有 L 型缩进线，在表格 and 已选列表中紧挨主设备显示。
+                </td>
+                <td class="p-3 border border-[#E1E5EB]">
+                  行为一致。勾选主备任意一台，关联设备自动加入已选，并且在列表中紧挨主设备缩进显示。
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ========================================================
+       3. 弹窗组件 1：设备多选-基础版 (Device 1)
+       ======================================================== -->
+    <div class="fixed inset-0 bg-[rgba(30,35,43,0.45)] z-[1000] flex items-center justify-center" 
+         x-show="basicModalOpen"
+         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+         style="display: none;">
+      
+      <!-- 弹窗容器 (1200px x 640px, 4px 圆角) -->
+      <div class="w-[1200px] h-[640px] bg-white rounded-[4px] shadow-[0_4px_16px_rgba(30,35,43,0.14)] flex flex-col overflow-hidden"
+           @click.away="basicHandleCancel()">
+        
+        <!-- 标题栏 (48px) -->
+        <div class="flex items-center justify-between px-4 h-[48px] shrink-0">
+          <span class="text-lg font-semibold text-[#2F3540]">选择设备</span>
+          <button class="w-6 h-6 flex items-center justify-center rounded-control text-[#6F7785] hover:bg-[#EDF1F7] hover:text-[#2F3540] transition-colors"
+                  @click="basicHandleCancel()">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <!-- 弹窗主体 (双栏布局) -->
+        <div class="flex flex-1 min-h-0 gap-2 px-4">
+          
+          <!-- 左侧：待选区 -->
+          <div class="flex-1 flex flex-col border border-[#D3D7DE] rounded-control overflow-hidden">
+            <!-- 标题 (白色底) -->
+            <div class="flex items-center px-3 h-[40px] shrink-0 bg-white">
+              <span class="text-xs font-semibold text-[#2F3540]">待选</span>
+            </div>
+
+            <!-- 搜索框 -->
+            <div class="px-3 pb-3 shrink-0">
+              <div class="relative">
+                <input type="text" placeholder="搜索设备名称/分组" x-model="basicSearchKeyword" @input="basicCurrentPage = 1"
+                       class="w-full h-[32px] pl-3 pr-9 text-xs bg-white border border-[#D3D7DE] rounded-control focus:border-[#1C6EFF] outline-none placeholder:text-[#A1A7B3] transition-colors text-[#2F3540]" />
+                <div class="absolute right-3 top-1/2 -translate-y-1/2 text-[#A1A7B3]">
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- 左树 + 右表 -->
+            <div class="flex flex-1 min-h-0 border-t border-[#E1E5EB] overflow-hidden">
+              
+              <!-- 左侧：分组树 (260px) -->
+              <div class="w-[260px] shrink-0 border-r border-[#E1E5EB] flex flex-col bg-white">
+                <div class="flex-1 overflow-y-auto custom-scrollbar py-1">
+                  
+                  <template x-for="item in basicGetFlattenedTree()" :key="item.id">
+                    <div class="flex items-center h-[32px] cursor-pointer relative"
+                         :class="basicIsGroupDisabled(item.id) ? 'opacity-40 pointer-events-none' : 'hover:bg-[#F7F9FC]'"
+                         :style="basicActiveGroupId === item.id || basicSelectedGroups.includes(item.id) ? 'background-color: #E8F4FF;' : ''"
+                         @click="if(!basicIsGroupDisabled(item.id)) basicActiveGroupId = (basicActiveGroupId === item.id ? null : item.id)">
+                      
+                      <!-- 选中态左侧3px蓝色竖条 -->
+                      <template x-if="basicActiveGroupId === item.id || basicSelectedGroups.includes(item.id)">
+                        <span class="absolute left-0 top-0 bottom-0 w-[3px] rounded-r bg-[#1C6EFF] z-10"></span>
+                      </template>
+
+                      <!-- 树连线渲染 -->
+                      <span class="flex shrink-0 items-start" :style="'width: ' + (item.depth * 24) + 'px'">
+                        <template x-for="showLine in item.parentLines">
+                          <span class="relative shrink-0" style="width: 24px; height: 32px;">
+                            <span x-show="showLine" class="absolute w-px bg-[#E1E5EB]" style="left: 12px; top: 0; bottom: 0;"></span>
+                          </span>
+                        </template>
+                        <template x-if="item.depth > 0">
+                          <span class="relative shrink-0" style="width: 24px; height: 32px;">
+                            <span class="absolute w-px bg-[#E1E5EB]" :style="'left: 12px; top: 0; height: ' + (item.isLast ? '16px' : '100%')"></span>
+                            <span class="absolute h-px bg-[#E1E5EB]" style="left: 12px; top: 16px; width: 12px;"></span>
+                          </span>
+                        </template>
+                      </span>
+
+                      <!-- 展开/收起按钮 (+/-方形按钮) -->
+                      <span class="w-5 h-5 flex items-center justify-center shrink-0 z-10" @click.stop="if(item.hasChildren && !basicIsGroupDisabled(item.id)) basicToggleExpand(item.id)">
+                        <template x-if="item.hasChildren">
+                          <div class="w-4 h-4 flex items-center justify-center rounded-control border border-[#D3D7DE] select-none cursor-pointer"
+                               :style="item.id === 'root' ? 'background-color: #F7F9FC;' : 'background-color: white;'">
+                            <template x-if="basicExpandedNodes.includes(item.id)">
+                              <!-- 减号 -->
+                              <svg class="w-2.5 h-2.5 text-[#454C59]" viewBox="0 0 10 10" fill="none">
+                                <path d="M1.5 5H8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                              </svg>
+                            </template>
+                            <template x-if="!basicExpandedNodes.includes(item.id)">
+                              <!-- 加号 -->
+                              <svg class="w-2.5 h-2.5 text-[#454C59]" viewBox="0 0 10 10" fill="none">
+                                <path d="M1.5 5H8.5M5 1.5V8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                              </svg>
+                            </template>
+                          </div>
+                        </template>
+                        <template x-if="!item.hasChildren">
+                          <span class="w-1 h-1 rounded-full bg-[#E1E5EB]"></span>
+                        </template>
+                      </span>
+
+                      <!-- 复选框 -->
+                      <div class="shrink-0 mr-1.5 z-10" @click.stop>
+                        <template x-if="basicIsGroupDisabled(item.id)">
+                          <!-- 级联禁用时的复选框状态: checked=false, disabled=true, 并支持 Tooltip -->
+                          <div class="relative group/tooltip pointer-events-auto">
+                            <div class="w-3.5 h-3.5 border border-[#D3D7DE] bg-[#E1E5EB] rounded-control flex items-center justify-center cursor-not-allowed"></div>
+                            
+                            <!-- 悬浮 Tooltip 容器 -->
+                            <div class="tooltip-panel absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden bg-[#2F3540] text-white text-[10px] rounded-[2px] px-2 py-1 whitespace-nowrap z-50 shadow-md">
+                              该对象所属的父级已被选中，无需单独选择
+                            </div>
+                          </div>
+                        </template>
+
+                        <template x-if="!basicIsGroupDisabled(item.id)">
+                          <div class="w-3.5 h-3.5 border rounded-control flex items-center justify-center cursor-pointer transition-colors"
+                               :class="basicSelectedGroups.includes(item.id) ? 'bg-[#1C6EFF] border-[#1C6EFF]' : 'border-[#D3D7DE] bg-white hover:border-[#1C6EFF]'"
+                               @click="basicToggleGroup(item.id)">
+                            <template x-if="basicSelectedGroups.includes(item.id)">
+                              <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                              </svg>
+                            </template>
+                          </div>
+                        </template>
+                      </div>
+
+                      <!-- 文件夹图标 -->
+                      <svg class="w-4 h-4 shrink-0 mr-1.5 z-10" viewBox="0 0 16 16" fill="none">
+                        <path d="M1.5 3.5C1.5 2.67 2.17 2 3 2H6L7.5 3.5H13C13.83 3.5 14.5 4.17 14.5 5V12.5C14.5 13.33 13.83 14 13 14H3C2.17 14 1.5 13.33 1.5 12.5V3.5Z" fill="#FDAA1D" />
+                        <path d="M1.5 5.5H14.5V12.5C14.5 13.33 13.83 14 13 14H3C2.17 14 1.5 13.33 1.5 12.5V5.5Z" fill="#FFC24B" />
+                      </svg>
+
+                      <!-- 分组名称 -->
+                      <span class="text-xs leading-[20px] truncate flex-1 min-w-0 z-10"
+                            :style="basicIsGroupDisabled(item.id) ? 'color: #BEC3CC;' : 'color: #2F3540;'"
+                            x-text="item.name === 'root' ? '/' : item.name"></span>
+                    </div>
+                  </template>
+
+                </div>
+              </div>
+
+              <!-- 右侧：设备表格 (基础版列宽为：多选40 | 名称 flex-1 | 状态90 | 分组240) -->
+              <div class="flex-1 min-w-0 flex flex-col bg-white">
+                <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+                  
+                  <!-- 表头 -->
+                  <div class="flex items-center h-[32px] bg-[#EDF1F7] border-b border-[#E1E5EB] sticky top-0 z-10 select-none">
+                    <!-- 多选框 (40px) -->
+                    <div class="w-[40px] shrink-0 flex items-center justify-center relative">
+                      <div class="w-3.5 h-3.5 border rounded-control flex items-center justify-center cursor-pointer transition-colors hover:border-[#1C6EFF]"
+                           :class="basicIsAllSelected() || basicIsHeaderIndeterminate() ? 'bg-[#1C6EFF] border-[#1C6EFF]' : 'border-[#D3D7DE] bg-white'"
+                           @click="basicToggleSelectAll()">
+                        <template x-if="basicIsAllSelected()">
+                          <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                          </svg>
+                        </template>
+                        <template x-if="!basicIsAllSelected() && basicIsHeaderIndeterminate()">
+                          <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                          </svg>
+                        </template>
+                      </div>
+                      <span class="absolute right-0 top-1/2 -translate-y-1/2 w-px h-[16px] bg-[#E1E5EB]"></span>
+                    </div>
+
+                    <!-- 设备名称 (200px) -->
+                    <div class="w-[200px] shrink-0 flex items-center px-3 relative">
+                      <span class="text-xs text-[#454C59] font-normal truncate">设备名称</span>
+                      <span class="absolute right-0 top-1/2 -translate-y-1/2 w-px h-[16px] bg-[#E1E5EB]"></span>
+                    </div>
+
+                    <!-- 接入状态 (90px) -->
+                    <div class="w-[90px] shrink-0 flex items-center px-3 relative">
+                      <span class="text-xs text-[#454C59] font-normal truncate">接入状态</span>
+                      <span class="absolute right-0 top-1/2 -translate-y-1/2 w-px h-[16px] bg-[#E1E5EB]"></span>
+                    </div>
+
+                    <!-- 所属分组 (flex-1) -->
+                    <div class="flex-1 flex items-center px-3">
+                      <span class="text-xs text-[#454C59] font-normal truncate">所属分组</span>
+                    </div>
+                  </div>
+
+                  <!-- 表格列表内容 -->
+                  <div class="min-h-[200px]">
+                    <template x-if="basicGetFilteredDevices().length === 0">
+                      <div class="flex flex-col items-center justify-center py-16">
+                        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" class="mb-2">
+                          <rect x="16" y="18" width="32" height="28" rx="2" fill="#EDF1F7" stroke="#D3D7DE" stroke-width="1.5" />
+                          <rect x="24" y="46" width="16" height="3" rx="1" fill="#D3D7DE" />
+                          <circle cx="32" cy="32" r="6" fill="white" stroke="#D3D7DE" stroke-width="1.5" />
+                        </svg>
+                        <div class="text-xs text-[#6F7785]">暂无设备数据</div>
+                      </div>
+                    </template>
+
+                    <template x-for="device in basicGetPagedDevices()" :key="device.id">
+                      <div class="flex items-center h-[40px] border-b border-[#E1E5EB] transition-colors"
+                           :style="basicIsDeviceDisabledByGroup(device) ? 'opacity: 0.4; background-color: transparent;' : (basicIsDeviceChecked(device.id) ? 'background-color: #E8F4FF;' : '')"
+                           :class="!basicIsDeviceDisabledByGroup(device) && 'hover:bg-[#F7F9FC]'">
+                        
+                        <!-- Checkbox (40px) -->
+                        <div class="w-[40px] shrink-0 flex items-center justify-center">
+                          <template x-if="basicIsDeviceDisabledByGroup(device)">
+                            <!-- 级联禁用状态: checked=true, disabled=true, 带 Tooltip -->
+                            <div class="relative group/tooltip">
+                              <div class="w-3.5 h-3.5 border border-[#D3D7DE] bg-[#E1E5EB] rounded-control flex items-center justify-center cursor-not-allowed">
+                                <svg class="w-2.5 h-2.5 text-[#5E6573]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                                  <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                              </div>
+                              <div class="tooltip-panel absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden bg-[#2F3540] text-white text-[10px] rounded-[2px] px-2 py-1 whitespace-nowrap z-50 shadow-md">
+                                该对象所属的父级已被选中，无需单独选择
+                              </div>
+                            </div>
+                          </template>
+
+                          <template x-if="!basicIsDeviceDisabledByGroup(device)">
+                            <div class="w-3.5 h-3.5 border rounded-control flex items-center justify-center cursor-pointer transition-colors hover:border-[#1C6EFF]"
+                                 :class="basicIsDeviceChecked(device.id) ? 'bg-[#1C6EFF] border-[#1C6EFF]' : 'border-[#D3D7DE] bg-white'"
+                                 @click="basicToggleDevice(device.id)">
+                              <template x-if="basicIsDeviceChecked(device.id)">
+                                <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                                  <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                              </template>
+                            </div>
+                          </template>
+                        </div>
+
+                        <!-- 设备名称 (200px) -->
+                        <div class="w-[200px] shrink-0 flex items-center gap-2 px-3 min-w-0">
+                          <!-- 备设备 L 型缩进连线 -->
+                          <template x-if="device.type === '备'">
+                            <span class="relative shrink-0" style="width: 12px; height: 40px;">
+                              <span class="absolute w-px bg-[#8F959E]" style="left: 0; top: 0; height: 50%;"></span>
+                              <span class="absolute h-px bg-[#8F959E]" style="left: 0; top: 50%; width: 12px;"></span>
+                            </span>
+                          </template>
+
+                          <!-- 网关图标 -->
+                          <svg class="w-4 h-4 shrink-0" viewBox="0 0 16 16" fill="none">
+                            <rect x="2" y="4" width="12" height="8" rx="1.5" fill="#1C6EFF" />
+                            <circle cx="5" cy="8" r="1.2" fill="white" />
+                            <circle cx="8" cy="8" r="1.2" fill="white" />
+                            <circle cx="11" cy="8" r="1.2" fill="white" />
+                            <path d="M5 3V4" stroke="#1C6EFF" stroke-width="1.2" stroke-linecap="round" />
+                            <path d="M8 3V4" stroke="#1C6EFF" stroke-width="1.2" stroke-linecap="round" />
+                            <path d="M11 3V4" stroke="#1C6EFF" stroke-width="1.2" stroke-linecap="round" />
+                          </svg>
+
+                          <!-- 主备标签 -->
+                          <template x-if="device.type">
+                            <span class="inline-flex items-center justify-center h-[18px] px-1 text-[10px] font-medium leading-none rounded-control shrink-0"
+                                  :style="device.type === '主' ? 'color: #1C6EFF; background-color: #E8F4FF;' : 'color: #12A679; background-color: #E6F9F0;'"
+                                  x-text="device.type"></span>
+                          </template>
+
+                          <span class="text-xs text-[#2F3540] truncate" x-text="device.name"></span>
+                        </div>
+
+                        <!-- 接入状态 (90px) -->
+                        <div class="w-[90px] shrink-0 px-3">
+                          <span class="inline-flex items-center h-[20px] px-1.5 text-xs rounded-control border"
+                                :style="{
+                                  online: 'color: #12A679; background-color: #E6F7F0; border-color: #E6F7F0;',
+                                  offline: 'color: #6F7785; background-color: #EDF1F7; border-color: #EDF1F7;',
+                                  pending: 'color: #FDAA1D; background-color: #FFF5E0; border-color: #FFF5E0;',
+                                  fault: 'color: #CF171D; background-color: #FCE8E8; border-color: #FCE8E8;'
+                                }[device.status]">
+                            <span class="w-1.5 h-1.5 rounded-full mr-1 shrink-0"
+                                  :style="{
+                                    online: 'background-color: #12A679;',
+                                    offline: 'background-color: #6F7785;',
+                                    pending: 'background-color: #FDAA1D;',
+                                    fault: 'background-color: #CF171D;'
+                                  }[device.status]"></span>
+                            <span x-text="{ online: '在线', offline: '离线', pending: '待接入', fault: '故障' }[device.status]"></span>
+                          </span>
+                        </div>
+
+                        <!-- 所属分组 (flex-1) -->
+                        <div class="flex-1 px-3 text-xs text-[#6F7785] truncate" x-text="device.groupName"></div>
+
+                      </div>
+                    </template>
+                  </div>
+
+                </div>
+
+                <!-- 分页控制栏 (40px, 白色底) -->
+                <div class="flex items-center justify-between px-3 h-[40px] border-t border-[#E1E5EB] shrink-0 bg-white select-none">
+                  <span class="text-xs text-[#6F7785]">
+                    共 <span x-text="basicGetFilteredDevices().length"></span> 项
+                  </span>
+
+                  <div class="flex items-center gap-0.5">
+                    <button class="w-6 h-6 flex items-center justify-center text-[#6F7785] hover:text-[#2F3540] disabled:text-[#D3D7DE] disabled:cursor-not-allowed rounded-control"
+                            :disabled="basicCurrentPage <= 1" @click="basicCurrentPage = Math.max(1, basicCurrentPage - 1)">
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                      </svg>
+                    </button>
+
+                    <template x-for="p in basicGetPageNumbers()">
+                      <div>
+                        <template x-if="p === 'ellipsis'">
+                          <span class="w-6 h-6 flex items-center justify-center text-xs text-[#6F7785]">...</span>
+                        </template>
+                        <template x-if="p !== 'ellipsis'">
+                          <button class="w-6 h-6 flex items-center justify-center rounded-full text-xs transition-colors"
+                                  :style="p === basicCurrentPage ? 'background-color: #1C6EFF; color: #fff;' : 'color: #2F3540;'"
+                                  @click="basicCurrentPage = p" x-text="p"></button>
+                        </template>
+                      </div>
+                    </template>
+
+                    <button class="w-6 h-6 flex items-center justify-center text-[#6F7785] hover:text-[#2F3540] disabled:text-[#D3D7DE] disabled:cursor-not-allowed rounded-control"
+                            :disabled="basicCurrentPage >= basicGetTotalPages()"
+                            @click="basicCurrentPage = Math.min(basicGetTotalPages(), basicCurrentPage + 1)">
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+
+          <!-- 右侧：已选区 (340px) -->
+          <div class="w-[340px] shrink-0 flex flex-col border border-[#D3D7DE] rounded-control overflow-hidden bg-white">
+            <div class="flex items-center justify-between px-3 h-[40px] shrink-0 bg-white">
+              <span class="text-xs font-semibold text-[#2F3540]">
+                已选(<span x-text="basicGetSelectedCount()"></span>)
+              </span>
+              <button class="flex items-center gap-1 text-[#6F7785] hover:text-[#CF171D] transition-colors disabled:opacity-40"
+                      @click="basicClearAll()" :disabled="basicGetSelectedCount() === 0">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+
+            <!-- 已选搜索 -->
+            <div class="px-3 pb-3 shrink-0">
+              <div class="relative">
+                <input type="text" placeholder="搜索已选设备" x-model="basicSelectedSearchKeyword"
+                       class="w-full h-[32px] pl-3 pr-8 text-xs bg-white border border-[#D3D7DE] rounded-control focus:border-[#1C6EFF] outline-none placeholder:text-[#A1A7B3] transition-colors text-[#2F3540]" />
+                <div class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#A1A7B3]">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex-1 min-h-0 flex flex-col border-t border-[#E1E5EB] overflow-hidden">
+              <!-- 表头 -->
+              <div class="shrink-0 flex items-center h-[32px] bg-[#EDF1F7] border-b border-[#E1E5EB] px-3 select-none">
+                <span class="flex-1 text-xs text-[#454C59] font-medium">设备名称</span>
+                <span class="w-[120px] shrink-0 text-xs text-[#454C59] font-medium relative pl-3">
+                  所属分组
+                  <span class="absolute left-0 top-1/2 -translate-y-1/2 h-[16px] w-px bg-[#E1E5EB]"></span>
+                </span>
+                <span class="w-[48px] shrink-0 text-xs text-[#454C59] font-medium relative pl-3 text-center">
+                  操作
+                  <span class="absolute left-0 top-1/2 -translate-y-1/2 h-[16px] w-px bg-[#E1E5EB]"></span>
+                </span>
+              </div>
+
+              <!-- 已选列表 -->
+              <div class="flex-1 overflow-y-auto custom-scrollbar bg-white">
+                <template x-if="basicGetSelectedGroupEntries().length === 0 && basicGetOrderedSelectedDevices().length === 0">
+                  <div class="flex flex-col items-center justify-center py-20">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" class="mb-3">
+                      <rect x="12" y="16" width="40" height="36" rx="2" fill="#EDF1F7" />
+                      <path d="M12 22V18C12 16.8954 12.8954 16 14 16H26L30 22H12Z" fill="#D3D7DE" />
+                    </svg>
+                    <div class="text-xs text-[#6F7785]">暂无已选设备</div>
+                    <div class="text-[12px] text-[#A1A7B3] mt-1">请在左侧勾选设备或分组</div>
+                  </div>
+                </template>
+
+                <!-- 已选分组 -->
+                <template x-for="group in basicGetSelectedGroupEntries()" :key="'basic-sel-g-'+group.id">
+                  <div class="flex items-center h-[40px] border-b border-[#E1E5EB] px-3 hover:bg-[#F7F9FC] transition-colors">
+                    <div class="flex-1 min-w-0 flex items-center gap-1.5">
+                      <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 16 16" fill="none">
+                        <path d="M1.5 3.5C1.5 2.67 2.17 2 3 2H6L7.5 3.5H13C13.83 3.5 14.5 4.17 14.5 5V12.5C14.5 13.33 13.83 14 13 14H3C2.17 14 1.5 13.33 1.5 12.5V3.5Z" fill="#FDAA1D" />
+                        <path d="M1.5 5.5H14.5V12.5C14.5 13.33 13.83 14 13 14H3C2.17 14 1.5 13.33 1.5 12.5V5.5Z" fill="#FFC24B" />
+                      </svg>
+                      <span class="text-xs text-[#2F3540] truncate" x-text="group.name"></span>
+                    </div>
+                    <span class="w-[120px] shrink-0 text-xs text-[#6F7785] truncate pl-3" x-text="group.parentPath"></span>
+                    <div class="w-[48px] shrink-0 flex items-center justify-center">
+                      <button class="w-4 h-4 flex items-center justify-center text-[#8F959E] hover:text-[#CF171D] transition-colors"
+                              @click="basicRemoveSelected(group.id, 'group')">
+                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- 已选设备 -->
+                <template x-for="device in basicGetOrderedSelectedDevices()" :key="'basic-sel-d-'+device.id">
+                  <div class="flex items-center h-[40px] border-b border-[#E1E5EB] px-3 hover:bg-[#F7F9FC] transition-colors">
+                    <div class="flex-1 min-w-0 flex items-center gap-1.5">
+                      <!-- 备设备 L 型连线 -->
+                      <template x-if="device.type === '备'">
+                        <span class="relative shrink-0" style="width: 8px; height: 40px;">
+                          <span class="absolute w-px bg-[#8F959E]" style="left: 0; top: 0; height: 50%;"></span>
+                          <span class="absolute h-px bg-[#8F959E]" style="left: 0; top: 50%; width: 8px;"></span>
+                        </span>
+                      </template>
+
+                      <!-- 设备网关图标 -->
+                      <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 16 16" fill="none">
+                        <rect x="2" y="4" width="12" height="8" rx="1.5" fill="#1C6EFF" />
+                        <circle cx="5" cy="8" r="1.2" fill="white" />
+                        <circle cx="8" cy="8" r="1.2" fill="white" />
+                        <circle cx="11" cy="8" r="1.2" fill="white" />
+                      </svg>
+
+                      <!-- 主备标签 -->
+                      <template x-if="device.type">
+                        <span class="inline-flex items-center justify-center h-[18px] px-1 text-[10px] font-medium leading-none rounded-control shrink-0"
+                              :style="device.type === '主' ? 'color: #1C6EFF; background-color: #E8F4FF;' : 'color: #12A679; background-color: #E6F9F0;'"
+                              x-text="device.type"></span>
+                      </template>
+
+                      <span class="text-xs text-[#2F3540] truncate" x-text="device.name"></span>
+                    </div>
+                    <span class="w-[120px] shrink-0 text-xs text-[#6F7785] truncate pl-3" x-text="device.groupName"></span>
+                    <div class="w-[48px] shrink-0 flex items-center justify-center">
+                      <button class="w-4 h-4 flex items-center justify-center text-[#8F959E] hover:text-[#CF171D] transition-colors"
+                              @click="basicRemoveSelected(device.id, 'device')">
+                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 底栏 (56px) - 确定在左，取消在右 (主右对齐) -->
+        <div class="flex items-center justify-between px-4 h-[56px] shrink-0 border-t border-[#E1E5EB] select-none">
+          <button class="flex items-center gap-1.5 h-[32px] px-4 text-xs text-[#2F3540] border border-[#D3D7DE] rounded-control hover:border-[#1C6EFF] hover:text-[#1C6EFF] transition-colors bg-white">
+            <span>设备列表</span>
+            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+          </button>
+
+          <div class="flex items-center gap-2">
+            <!-- 确定 (在左) -->
+            <button class="w-[72px] h-[32px] text-[14px] font-medium rounded-control text-white bg-[#1C6EFF] hover:bg-[#4FA1FF] active:bg-[#1458CC] transition-colors cursor-pointer"
+                    @click="basicHandleConfirm()">
+              确定
+            </button>
+            <!-- 取消 (在右) -->
+            <button class="w-[72px] h-[32px] text-[14px] rounded-control border border-[#D3D7DE] text-[#2F3540] hover:border-[#1C6EFF] hover:text-[#1C6EFF] transition-colors bg-white cursor-pointer"
+                    @click="basicHandleCancel()">
+              取消
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ========================================================
+       4. 弹窗组件 2：SASE设备多选选择器 (Device 2)
+       ======================================================== -->
+    <div class="fixed inset-0 bg-[rgba(30,35,43,0.45)] z-[1000] flex items-center justify-center" 
+         x-show="saseModalOpen"
+         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+         style="display: none;">
+      
+      <!-- 弹窗容器 (1200px x 640px) -->
+      <div class="w-[1200px] h-[640px] bg-white rounded-[4px] shadow-[0_4px_16px_rgba(30,35,43,0.14)] flex flex-col overflow-hidden"
+           @click.away="saseHandleCancel()">
+        
+        <!-- 标题栏 (48px) -->
+        <div class="flex items-center justify-between px-4 h-[48px] shrink-0">
+          <span class="text-lg font-semibold text-[#2F3540]">选择设备</span>
+          <button class="w-6 h-6 flex items-center justify-center rounded-control text-[#6F7785] hover:bg-[#EDF1F7] hover:text-[#2F3540] transition-colors"
+                  @click="saseHandleCancel()">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <!-- 弹窗主体 (三栏式布局) -->
+        <div class="flex flex-1 min-h-0 gap-2 px-4">
+          
+          <!-- 左侧：待选区 -->
+          <div class="flex-1 flex flex-col border border-[#D3D7DE] rounded-control overflow-hidden">
+            <div class="flex items-center px-3 h-[40px] shrink-0 bg-white">
+              <span class="text-xs font-semibold text-[#2F3540]">待选</span>
+            </div>
+
+            <!-- 搜索框 -->
+            <div class="px-3 pb-3 shrink-0">
+              <div class="relative">
+                <input type="text" placeholder="搜索设备名称/分组" x-model="saseSearchKeyword" @input="saseCurrentPage = 1"
+                       class="w-full h-[32px] pl-3 pr-9 text-xs bg-white border border-[#D3D7DE] rounded-control focus:border-[#1C6EFF] outline-none placeholder:text-[#A1A7B3] transition-colors text-[#2F3540]" />
+                <div class="absolute right-3 top-1/2 -translate-y-1/2 text-[#A1A7B3]">
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- 左树 + 右表 -->
+            <div class="flex flex-1 min-h-0 border-t border-[#E1E5EB] overflow-hidden">
+              
+              <!-- 左侧：分组树 (260px) -->
+              <div class="w-[260px] shrink-0 border-r border-[#E1E5EB] flex flex-col bg-white">
+                <div class="flex-1 overflow-y-auto custom-scrollbar py-1">
+                  
+                  <template x-for="item in saseGetFlattenedTree()" :key="item.id">
+                    <div class="flex items-center h-[32px] cursor-pointer relative"
+                         :class="saseIsGroupDisabled(item.id) ? 'opacity-40 pointer-events-none' : 'hover:bg-[#F7F9FC]'"
+                         :style="saseActiveGroupId === item.id || saseSelectedGroups.includes(item.id) ? 'background-color: #E8F4FF;' : ''"
+                         @click="if(!saseIsGroupDisabled(item.id)) saseActiveGroupId = (saseActiveGroupId === item.id ? null : item.id)">
+                      
+                      <!-- 选中态左侧3px蓝色竖条 -->
+                      <template x-if="saseActiveGroupId === item.id || saseSelectedGroups.includes(item.id)">
+                        <span class="absolute left-0 top-0 bottom-0 w-[3px] rounded-r bg-[#1C6EFF] z-10"></span>
+                      </template>
+
+                      <!-- 树连线渲染 -->
+                      <span class="flex shrink-0 items-start" :style="'width: ' + (item.depth * 24) + 'px'">
+                        <template x-for="showLine in item.parentLines">
+                          <span class="relative shrink-0" style="width: 24px; height: 32px;">
+                            <span x-show="showLine" class="absolute w-px bg-[#E1E5EB]" style="left: 12px; top: 0; bottom: 0;"></span>
+                          </span>
+                        </template>
+                        <template x-if="item.depth > 0">
+                          <span class="relative shrink-0" style="width: 24px; height: 32px;">
+                            <span class="absolute w-px bg-[#E1E5EB]" :style="'left: 12px; top: 0; height: ' + (item.isLast ? '16px' : '100%')"></span>
+                            <span class="absolute h-px bg-[#E1E5EB]" style="left: 12px; top: 16px; width: 12px;"></span>
+                          </span>
+                        </template>
+                      </span>
+
+                      <!-- 展开/收起按钮 (+/-方形按钮) -->
+                      <span class="w-5 h-5 flex items-center justify-center shrink-0 z-10" @click.stop="if(item.hasChildren && !saseIsGroupDisabled(item.id)) saseToggleExpand(item.id)">
+                        <template x-if="item.hasChildren">
+                          <div class="w-4 h-4 flex items-center justify-center rounded-control border border-[#D3D7DE] select-none cursor-pointer"
+                               :style="item.id === 'root' ? 'background-color: #F7F9FC;' : 'background-color: white;'">
+                            <template x-if="saseExpandedNodes.includes(item.id)">
+                              <!-- 减号 -->
+                              <svg class="w-2.5 h-2.5 text-[#454C59]" viewBox="0 0 10 10" fill="none">
+                                <path d="M1.5 5H8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                              </svg>
+                            </template>
+                            <template x-if="!saseExpandedNodes.includes(item.id)">
+                              <!-- 加号 -->
+                              <svg class="w-2.5 h-2.5 text-[#454C59]" viewBox="0 0 10 10" fill="none">
+                                <path d="M1.5 5H8.5M5 1.5V8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                              </svg>
+                            </template>
+                          </div>
+                        </template>
+                        <template x-if="!item.hasChildren">
+                          <span class="w-1 h-1 rounded-full bg-[#E1E5EB]"></span>
+                        </template>
+                      </span>
+
+                      <!-- 复选框 -->
+                      <div class="shrink-0 mr-1.5 z-10" @click.stop>
+                        <template x-if="saseIsGroupDisabled(item.id)">
+                          <div class="relative group/tooltip pointer-events-auto">
+                            <div class="w-3.5 h-3.5 border border-[#D3D7DE] bg-[#E1E5EB] rounded-control flex items-center justify-center cursor-not-allowed"></div>
+                            
+                            <!-- 悬浮 Tooltip 容器 -->
+                            <div class="tooltip-panel absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/tooltip:block bg-[#2F3540] text-white text-[10px] rounded-[2px] px-2 py-1 whitespace-nowrap z-50 shadow-md">
+                              该对象所属的父级已被选中，无需单独选择
+                            </div>
+                          </div>
+                        </template>
+
+                        <template x-if="!saseIsGroupDisabled(item.id)">
+                          <div class="w-3.5 h-3.5 border rounded-control flex items-center justify-center cursor-pointer transition-colors"
+                               :class="saseSelectedGroups.includes(item.id) ? 'bg-[#1C6EFF] border-[#1C6EFF]' : 'border-[#D3D7DE] bg-white hover:border-[#1C6EFF]'"
+                               @click="saseToggleGroup(item.id)">
+                            <template x-if="saseSelectedGroups.includes(item.id)">
+                              <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                              </svg>
+                            </template>
+                          </div>
+                        </template>
+                      </div>
+
+                      <!-- 文件夹图标 -->
+                      <svg class="w-4 h-4 shrink-0 mr-1.5 z-10" viewBox="0 0 16 16" fill="none">
+                        <path d="M1.5 3.5C1.5 2.67 2.17 2 3 2H6L7.5 3.5H13C13.83 3.5 14.5 4.17 14.5 5V12.5C14.5 13.33 13.83 14 13 14H3C2.17 14 1.5 13.33 1.5 12.5V3.5Z" fill="#FDAA1D" />
+                        <path d="M1.5 5.5H14.5V12.5C14.5 13.33 13.83 14 13 14H3C2.17 14 1.5 13.33 1.5 12.5V5.5Z" fill="#FFC24B" />
+                      </svg>
+
+                      <!-- 分组名称 -->
+                      <span class="text-xs leading-[20px] truncate flex-1 min-w-0 z-10"
+                            :style="saseIsGroupDisabled(item.id) ? 'color: #BEC3CC;' : 'color: #2F3540;'"
+                            x-text="item.name"></span>
+                    </div>
+                  </template>
+
+                </div>
+              </div>
+
+              <!-- 右侧设备表格 (SASE版列宽分配为：多选40 | 名称200固定 | 状态90 | 分组 flex-1 自适应) -->
+              <div class="flex-1 min-w-0 flex flex-col bg-white">
+                <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+                  
+                  <!-- 表头 -->
+                  <div class="flex items-center h-[32px] bg-[#EDF1F7] border-b border-[#E1E5EB] sticky top-0 z-10 select-none">
+                    <div class="w-[40px] shrink-0 flex items-center justify-center relative">
+                      <div class="w-3.5 h-3.5 border rounded-control flex items-center justify-center cursor-pointer transition-colors hover:border-[#1C6EFF]"
+                           :class="saseIsAllSelected() || saseIsHeaderIndeterminate() ? 'bg-[#1C6EFF] border-[#1C6EFF]' : 'border-[#D3D7DE] bg-white'"
+                           @click="saseToggleSelectAll()">
+                        <template x-if="saseIsAllSelected()">
+                          <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                          </svg>
+                        </template>
+                        <template x-if="!saseIsAllSelected() && saseIsHeaderIndeterminate()">
+                          <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                          </svg>
+                        </template>
+                      </div>
+                      <span class="absolute right-0 top-1/2 -translate-y-1/2 w-px h-[16px] bg-[#E1E5EB]"></span>
+                    </div>
+
+                    <div class="w-[200px] shrink-0 flex items-center px-3 relative">
+                      <span class="text-xs text-[#454C59] font-normal truncate">设备名称</span>
+                      <span class="absolute right-0 top-1/2 -translate-y-1/2 w-px h-[16px] bg-[#E1E5EB]"></span>
+                    </div>
+
+                    <div class="w-[90px] shrink-0 flex items-center px-3 relative">
+                      <span class="text-xs text-[#454C59] font-normal truncate">接入状态</span>
+                      <span class="absolute right-0 top-1/2 -translate-y-1/2 w-px h-[16px] bg-[#E1E5EB]"></span>
+                    </div>
+
+                    <div class="flex-1 flex items-center px-3">
+                      <span class="text-xs text-[#454C59] font-normal truncate">所属分组</span>
+                    </div>
+                  </div>
+
+                  <!-- 表格列表内容 -->
+                  <div class="min-h-[200px]">
+                    <template x-if="saseGetFilteredDevices().length === 0">
+                      <div class="flex flex-col items-center justify-center py-16">
+                        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" class="mb-2">
+                          <rect x="16" y="18" width="32" height="28" rx="2" fill="#EDF1F7" stroke="#D3D7DE" stroke-width="1.5" />
+                          <rect x="24" y="46" width="16" height="3" rx="1" fill="#D3D7DE" />
+                          <circle cx="32" cy="32" r="6" fill="white" stroke="#D3D7DE" stroke-width="1.5" />
+                        </svg>
+                        <div class="text-xs text-[#6F7785]">暂无设备数据</div>
+                      </div>
+                    </template>
+
+                    <template x-for="device in saseGetPagedDevices()" :key="device.id">
+                      <div class="flex items-center h-[40px] border-b border-[#E1E5EB] transition-colors"
+                           :style="saseIsDeviceDisabledByGroup(device) ? 'opacity: 0.4; background-color: transparent;' : (saseIsDeviceChecked(device.id) ? 'background-color: #E8F4FF;' : '')"
+                           :class="!saseIsDeviceDisabledByGroup(device) && 'hover:bg-[#F7F9FC]'">
+                        
+                        <!-- Checkbox (40px) -->
+                        <div class="w-[40px] shrink-0 flex items-center justify-center">
+                          <template x-if="saseIsDeviceDisabledByGroup(device)">
+                            <div class="relative group/tooltip">
+                              <div class="w-3.5 h-3.5 border border-[#D3D7DE] bg-[#EDF1F7] rounded-control flex items-center justify-center cursor-not-allowed">
+                                <svg class="w-2.5 h-2.5 text-[#6F7785]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                                  <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                              </div>
+                              <div class="tooltip-panel absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden bg-[#2F3540] text-white text-[10px] rounded-[2px] px-2 py-1 whitespace-nowrap z-50 shadow-md">
+                                该对象所属的父级已被选中，无需单独选择
+                              </div>
+                            </div>
+                          </template>
+
+                          <template x-if="!saseIsDeviceDisabledByGroup(device)">
+                            <div class="w-3.5 h-3.5 border rounded-control flex items-center justify-center cursor-pointer transition-colors hover:border-[#1C6EFF]"
+                                 :class="saseIsDeviceChecked(device.id) ? 'bg-[#1C6EFF] border-[#1C6EFF]' : 'border-[#D3D7DE] bg-white'"
+                                 @click="saseToggleDevice(device.id)">
+                              <template x-if="saseIsDeviceChecked(device.id)">
+                                <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                                  <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                              </template>
+                            </div>
+                          </template>
+                        </div>
+
+                        <!-- 设备名称 (200px) -->
+                        <div class="w-[200px] shrink-0 flex items-center gap-2 px-3 min-w-0">
+                          <template x-if="device.type === '备'">
+                            <span class="relative shrink-0" style="width: 12px; height: 40px;">
+                              <span class="absolute w-px bg-[#8F959E]" style="left: 0; top: 0; height: 50%;"></span>
+                              <span class="absolute h-px bg-[#8F959E]" style="left: 0; top: 50%; width: 12px;"></span>
+                            </span>
+                          </template>
+
+                          <svg class="w-4 h-4 shrink-0" viewBox="0 0 16 16" fill="none">
+                            <rect x="2" y="4" width="12" height="8" rx="1.5" fill="#1C6EFF" />
+                            <circle cx="5" cy="8" r="1.2" fill="white" />
+                            <circle cx="8" cy="8" r="1.2" fill="white" />
+                            <circle cx="11" cy="8" r="1.2" fill="white" />
+                            <path d="M5 3V4" stroke="#1C6EFF" stroke-width="1.2" stroke-linecap="round" />
+                            <path d="M8 3V4" stroke="#1C6EFF" stroke-width="1.2" stroke-linecap="round" />
+                            <path d="M11 3V4" stroke="#1C6EFF" stroke-width="1.2" stroke-linecap="round" />
+                          </svg>
+
+                          <template x-if="device.type">
+                            <span class="inline-flex items-center justify-center h-[18px] px-1 text-[10px] font-medium leading-none rounded-control shrink-0"
+                                  :style="device.type === '主' ? 'color: #1C6EFF; background-color: #E8F4FF;' : 'color: #6F7785; background-color: #EDF1F7;'"
+                                  x-text="device.type"></span>
+                          </template>
+
+                          <span class="text-xs text-[#2F3540] truncate" x-text="device.name"></span>
+                        </div>
+
+                        <!-- 接入状态 (90px) -->
+                        <div class="w-[90px] shrink-0 px-3">
+                          <span class="inline-flex items-center h-[20px] px-1.5 text-xs rounded-control border"
+                                :style="{
+                                  online: 'color: #12A679; background-color: #E6F7F0; border-color: #E6F7F0;',
+                                  offline: 'color: #6F7785; background-color: #EDF1F7; border-color: #EDF1F7;',
+                                  pending: 'color: #FDAA1D; background-color: #FFF5E0; border-color: #FFF5E0;',
+                                  fault: 'color: #CF171D; background-color: #FCE8E8; border-color: #FCE8E8;'
+                                }[device.status]">
+                            <span class="w-1.5 h-1.5 rounded-full mr-1 shrink-0"
+                                  :style="{
+                                    online: 'background-color: #12A679;',
+                                    offline: 'background-color: #6F7785;',
+                                    pending: 'background-color: #FDAA1D;',
+                                    fault: 'background-color: #CF171D;'
+                                  }[device.status]"></span>
+                            <span x-text="{ online: '在线', offline: '离线', pending: '待接入', fault: '故障' }[device.status]"></span>
+                          </span>
+                        </div>
+
+                        <!-- 所属分组 (flex-1) -->
+                        <div class="flex-1 px-3 text-xs text-[#6F7785] truncate" x-text="device.groupName"></div>
+
+                      </div>
+                    </template>
+                  </div>
+
+                </div>
+
+                <!-- 分页控制栏 -->
+                <div class="flex items-center justify-between px-3 h-[40px] border-t border-[#E1E5EB] shrink-0 bg-white select-none">
+                  <span class="text-xs text-[#6F7785]">
+                    共 <span x-text="saseGetFilteredDevices().length"></span> 项
+                  </span>
+
+                  <div class="flex items-center gap-0.5">
+                    <button class="w-6 h-6 flex items-center justify-center text-[#6F7785] hover:text-[#2F3540] disabled:text-[#D3D7DE] disabled:cursor-not-allowed rounded-control"
+                            :disabled="saseCurrentPage <= 1" @click="saseCurrentPage = Math.max(1, saseCurrentPage - 1)">
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                      </svg>
+                    </button>
+
+                    <template x-for="p in saseGetPageNumbers()">
+                      <div>
+                        <template x-if="p === 'ellipsis'">
+                          <span class="w-6 h-6 flex items-center justify-center text-xs text-[#6F7785]">...</span>
+                        </template>
+                        <template x-if="p !== 'ellipsis'">
+                          <button class="w-6 h-6 flex items-center justify-center rounded-full text-xs transition-colors"
+                                  :style="p === saseCurrentPage ? 'background-color: #1C6EFF; color: #fff;' : 'color: #2F3540;'"
+                                  @click="saseCurrentPage = p" x-text="p"></button>
+                        </template>
+                      </div>
+                    </template>
+
+                    <button class="w-6 h-6 flex items-center justify-center text-[#6F7785] hover:text-[#2F3540] disabled:text-[#D3D7DE] disabled:cursor-not-allowed rounded-control"
+                            :disabled="saseCurrentPage >= saseGetTotalPages()"
+                            @click="saseCurrentPage = Math.min(saseGetTotalPages(), saseCurrentPage + 1)">
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+
+          <!-- 右侧：已选区 (340px) -->
+          <div class="w-[340px] shrink-0 flex flex-col border border-[#D3D7DE] rounded-control overflow-hidden bg-white">
+            <div class="flex items-center justify-between px-3 h-[40px] shrink-0 bg-white">
+              <span class="text-xs font-semibold text-[#2F3540]">
+                已选(<span x-text="saseGetSelectedCount()"></span>)
+              </span>
+              <button class="flex items-center gap-1 text-[#6F7785] hover:text-[#CF171D] transition-colors disabled:opacity-40"
+                      @click="saseClearAll()" :disabled="saseGetSelectedCount() === 0">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+
+            <!-- 已选搜索 -->
+            <div class="px-3 pb-3 shrink-0">
+              <div class="relative">
+                <input type="text" placeholder="搜索已选设备" x-model="saseSelectedSearchKeyword"
+                       class="w-full h-[32px] pl-3 pr-8 text-xs bg-white border border-[#D3D7DE] rounded-control focus:border-[#1C6EFF] outline-none placeholder:text-[#A1A7B3] transition-colors text-[#2F3540]" />
+                <div class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#A1A7B3]">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex-1 min-h-0 flex flex-col border-t border-[#E1E5EB] overflow-hidden">
+              <!-- 表头 -->
+              <div class="shrink-0 flex items-center h-[32px] bg-[#EDF1F7] border-b border-[#E1E5EB] px-3 select-none">
+                <span class="flex-1 text-xs text-[#454C59] font-medium">设备名称</span>
+                <span class="w-[120px] shrink-0 text-xs text-[#454C59] font-medium relative pl-3">
+                  所属分组
+                  <span class="absolute left-0 top-1/2 -translate-y-1/2 h-[16px] w-px bg-[#E1E5EB]"></span>
+                </span>
+                <span class="w-[48px] shrink-0 text-xs text-[#454C59] font-medium relative pl-3 text-center">
+                  操作
+                  <span class="absolute left-0 top-1/2 -translate-y-1/2 h-[16px] w-px bg-[#E1E5EB]"></span>
+                </span>
+              </div>
+
+              <!-- 已选列表 -->
+              <div class="flex-1 overflow-y-auto custom-scrollbar bg-white">
+                <template x-if="saseGetSelectedGroupEntries().length === 0 && saseGetOrderedSelectedDevices().length === 0">
+                  <div class="flex flex-col items-center justify-center py-20">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" class="mb-3">
+                      <rect x="12" y="16" width="40" height="36" rx="2" fill="#EDF1F7" />
+                      <path d="M12 22V18C12 16.8954 12.8954 16 14 16H26L30 22H12Z" fill="#D3D7DE" />
+                    </svg>
+                    <div class="text-xs text-[#6F7785]">暂无已选设备</div>
+                    <div class="text-[12px] text-[#A1A7B3] mt-1">请在左侧勾选设备或分组</div>
+                  </div>
+                </template>
+
+                <!-- 已选分组 -->
+                <template x-for="group in saseGetSelectedGroupEntries()" :key="'sase-sel-g-'+group.id">
+                  <div class="flex items-center h-[40px] border-b border-[#E1E5EB] px-3 hover:bg-[#F7F9FC] transition-colors">
+                    <div class="flex-1 min-w-0 flex items-center gap-1.5">
+                      <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 16 16" fill="none">
+                        <path d="M1.5 3.5C1.5 2.67 2.17 2 3 2H6L7.5 3.5H13C13.83 3.5 14.5 4.17 14.5 5V12.5C14.5 13.33 13.83 14 13 14H3C2.17 14 1.5 13.33 1.5 12.5V3.5Z" fill="#FDAA1D" />
+                        <path d="M1.5 5.5H14.5V12.5C14.5 13.33 13.83 14 13 14H3C2.17 14 1.5 13.33 1.5 12.5V5.5Z" fill="#FFC24B" />
+                      </svg>
+                      <span class="text-xs text-[#2F3540] truncate" x-text="group.name"></span>
+                    </div>
+                    <span class="w-[120px] shrink-0 text-xs text-[#6F7785] truncate pl-3" x-text="group.parentPath"></span>
+                    <div class="w-[48px] shrink-0 flex items-center justify-center">
+                      <button class="w-4 h-4 flex items-center justify-center text-[#8F959E] hover:text-[#CF171D] transition-colors"
+                              @click="saseRemoveSelected(group.id, 'group')">
+                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- 已选设备 -->
+                <template x-for="device in saseGetOrderedSelectedDevices()" :key="'sase-sel-d-'+device.id">
+                  <div class="flex items-center h-[40px] border-b border-[#E1E5EB] px-3 hover:bg-[#F7F9FC] transition-colors">
+                    <div class="flex-1 min-w-0 flex items-center gap-1.5">
+                      <template x-if="device.type === '备'">
+                        <span class="relative shrink-0" style="width: 8px; height: 40px;">
+                          <span class="absolute w-px bg-[#8F959E]" style="left: 0; top: 0; height: 50%;"></span>
+                          <span class="absolute h-px bg-[#8F959E]" style="left: 0; top: 50%; width: 8px;"></span>
+                        </span>
+                      </template>
+
+                      <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 16 16" fill="none">
+                        <rect x="2" y="4" width="12" height="8" rx="1.5" fill="#1C6EFF" />
+                        <circle cx="5" cy="8" r="1.2" fill="white" />
+                        <circle cx="8" cy="8" r="1.2" fill="white" />
+                        <circle cx="11" cy="8" r="1.2" fill="white" />
+                      </svg>
+
+                      <template x-if="device.type">
+                        <span class="inline-flex items-center justify-center h-[18px] px-1 text-[10px] font-medium leading-none rounded-control shrink-0"
+                              :style="device.type === '主' ? 'color: #1C6EFF; background-color: #E8F4FF;' : 'color: #6F7785; background-color: #EDF1F7;'"
+                              x-text="device.type"></span>
+                      </template>
+
+                      <span class="text-xs text-[#2F3540] truncate" x-text="device.name"></span>
+                    </div>
+                    <span class="w-[120px] shrink-0 text-xs text-[#6F7785] truncate pl-3" x-text="'/' + device.groupName"></span>
+                    <div class="w-[48px] shrink-0 flex items-center justify-center">
+                      <button class="w-4 h-4 flex items-center justify-center text-[#8F959E] hover:text-[#CF171D] transition-colors"
+                              @click="saseRemoveSelected(device.id, 'device')">
+                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 底栏 (56px) - 确定在左，取消在右 (主右对齐) -->
+        <div class="flex items-center justify-between px-4 h-[56px] shrink-0 border-t border-[#E1E5EB] select-none">
+          <button class="flex items-center gap-1.5 h-[32px] px-4 text-xs text-[#2F3540] border border-[#D3D7DE] rounded-control hover:border-[#1C6EFF] hover:text-[#1C6EFF] transition-colors bg-white">
+            <span>设备列表</span>
+            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+          </button>
+
+          <div class="flex items-center gap-2">
+            <!-- 确定 (在左) -->
+            <button class="w-[72px] h-[32px] text-[14px] font-medium rounded-control text-white bg-[#1C6EFF] hover:bg-[#4FA1FF] active:bg-[#1458CC] transition-colors cursor-pointer"
+                    @click="saseHandleConfirm()">
+              确定
+            </button>
+            <!-- 取消 (在右) -->
+            <button class="w-[72px] h-[32px] text-[14px] rounded-control border border-[#D3D7DE] text-[#2F3540] hover:border-[#1C6EFF] hover:text-[#1C6EFF] transition-colors bg-white cursor-pointer"
+                    @click="saseHandleCancel()">
+              取消
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- JavaScript 逻辑 -->
+  <script>
+    function pageState() {
+      return {
+        // 全局界面控制
+        sidebarFold: false,
+        submenuOpen: true,
+        profileOpen: false,
+        activeTab: 'demo',
+
+        // 表单字段
+        policyName: 'GENAI 终端准入控制策略',
+        policyAction: 'allow',
+
+        // ==========================================
+        // 配置项 1: 设备多选-基础版状态 (Device 1)
+        // ==========================================
+        basicModalOpen: false,
+        basicSearchKeyword: '',
+        basicSelectedSearchKeyword: '',
+        basicCurrentPage: 1,
+        basicActiveGroupId: null,
+        basicSelectedDevices: [],  // 主动选中的设备ID列表
+        basicSelectedGroups: [],   // 主动选中的分组ID列表
+        basicDisabledGroups: [],   // 被级联禁用的后代分组ID列表
+        basicExpandedNodes: ['root', 'guangdong'],
+        basicConfirmedResult: {
+          deviceIds: [],
+          groupIds: []
+        },
+
+        // 基础版分组树数据
+        basicGroupTree: [
+          {
+            id: 'root',
+            name: '/',
+            children: [
+              { id: 'uncategorized', name: '未分类', isLeaf: true },
+              { id: 'shanghai', name: '上海', isLeaf: true },
+              {
+                id: 'guangdong',
+                name: '广东',
+                children: [
+                  { id: 'guangzhou', name: '广州办事处', isLeaf: true },
+                  { id: 'shenzhen', name: '深圳办事处', isLeaf: true },
+                  { id: 'dongguan', name: '东莞办事处', isLeaf: true },
+                ],
+              },
+              { id: 'guangxi', name: '广西', isLeaf: true },
+            ],
+          },
+        ],
+
+        // 基础版模拟数据：70 台设备 (dev1 ~ dev70)
+        basicDevices: [
+          { id: 'dev1', name: 'unc-device-1', type: null, group: 'uncategorized', groupName: '/未分类', status: 'online' },
+          { id: 'dev2', name: 'sh-device-2', type: null, group: 'shanghai', groupName: '/上海', status: 'offline' },
+          { id: 'dev3', name: 'gz-device-3', type: null, group: 'guangzhou', groupName: '/广东/广州办事处', status: 'online' },
+          { id: 'dev4', name: 'sz-device-4', type: '主', group: 'shenzhen', groupName: '/广东/深圳办事处', status: 'online' },
+          { id: 'dev5', name: 'sz-device-5', type: '备', group: 'shenzhen', groupName: '/广东/深圳办事处', status: 'online', masterId: 'dev4' },
+          { id: 'dev6', name: 'dg-device-6', type: null, group: 'dongguan', groupName: '/广东/东莞办事处', status: 'pending' },
+          { id: 'dev7', name: 'gx-device-7', type: null, group: 'guangxi', groupName: '/广西', status: 'online' },
+          { id: 'dev8', name: 'unc-device-8', type: null, group: 'uncategorized', groupName: '/未分类', status: 'offline' },
+          { id: 'dev9', name: 'gz-device-9', type: '主', group: 'guangzhou', groupName: '/广东/广州办事处', status: 'online' },
+          { id: 'dev10', name: 'sh-device-10', type: null, group: 'shanghai', groupName: '/上海', status: 'online' },
+          { id: 'dev11', name: 'gd-device-11', type: null, group: 'guangdong', groupName: '/广东', status: 'offline' },
+          { id: 'dev12', name: 'gx-device-12', type: null, group: 'guangxi', groupName: '/广西', status: 'pending' },
+          { id: 'dev13', name: 'gz-device-13', type: '备', group: 'guangzhou', groupName: '/广东/广州办事处', status: 'online', masterId: 'dev9' },
+          { id: 'dev14', name: 'sh-device-14', type: null, group: 'shanghai', groupName: '/上海', status: 'online' },
+          { id: 'dev15', name: 'unc-device-15', type: null, group: 'uncategorized', groupName: '/未分类', status: 'fault' },
+          { id: 'dev16', name: 'dg-device-16', type: '主', group: 'dongguan', groupName: '/广东/东莞办事处', status: 'online' },
+          { id: 'dev17', name: 'sz-device-17', type: null, group: 'shenzhen', groupName: '/广东/深圳办事处', status: 'offline' },
+          { id: 'dev18', name: 'gx-device-18', type: null, group: 'guangxi', groupName: '/广西', status: 'online' },
+          { id: 'dev19', name: 'gd-device-19', type: null, group: 'guangdong', groupName: '/广东', status: 'online' },
+          { id: 'dev20', name: 'sh-device-20', type: '主', group: 'shanghai', groupName: '/上海', status: 'online' },
+          { id: 'dev21', name: 'gz-device-21', type: null, group: 'guangzhou', groupName: '/广东/广州办事处', status: 'pending' },
+          { id: 'dev22', name: 'unc-device-22', type: null, group: 'uncategorized', groupName: '/未分类', status: 'online' },
+          { id: 'dev23', name: 'sz-device-23', type: null, group: 'shenzhen', groupName: '/广东/深圳办事处', status: 'online' },
+          { id: 'dev24', name: 'dg-device-24', type: '备', group: 'dongguan', groupName: '/广东/东莞办事处', status: 'online', masterId: 'dev16' },
+          { id: 'dev25', name: 'gx-device-25', type: null, group: 'guangxi', groupName: '/广西', status: 'offline' },
+          { id: 'dev26', name: 'gd-device-26', type: null, group: 'guangdong', groupName: '/广东', status: 'online' },
+          { id: 'dev27', name: 'sh-device-27', type: null, group: 'shanghai', groupName: '/上海', status: 'fault' },
+          { id: 'dev28', name: 'gz-device-28', type: '主', group: 'guangzhou', groupName: '/广东/广州办事处', status: 'online' },
+          { id: 'dev29', name: 'unc-device-29', type: null, group: 'uncategorized', groupName: '/未分类', status: 'offline' },
+          { id: 'dev30', name: 'sz-device-30', type: null, group: 'shenzhen', groupName: '/广东/深圳办事处', status: 'pending' },
+          { id: 'dev31', name: 'dg-device-31', type: null, group: 'dongguan', groupName: '/广东/东莞办事处', status: 'online' },
+          { id: 'dev32', name: 'gx-device-32', type: null, group: 'guangxi', groupName: '/广西', status: 'online' },
+          { id: 'dev33', name: 'gd-device-33', type: '主', group: 'guangdong', groupName: '/广东', status: 'online' },
+          { id: 'dev34', name: 'sh-device-34', type: '备', group: 'shanghai', groupName: '/上海', status: 'online', masterId: 'dev20' },
+          { id: 'dev35', name: 'gz-device-35', type: null, group: 'guangzhou', groupName: '/广东/广州办事处', status: 'offline' },
+          { id: 'dev36', name: 'unc-device-36', type: null, group: 'uncategorized', groupName: '/未分类', status: 'online' },
+          { id: 'dev37', name: 'sz-device-37', type: null, group: 'shenzhen', groupName: '/广东/深圳办事处', status: 'online' },
+          { id: 'dev38', name: 'dg-device-38', type: null, group: 'dongguan', groupName: '/广东/东莞办事处', status: 'pending' },
+          { id: 'dev39', name: 'gx-device-39', type: null, group: 'guangxi', groupName: '/广西', status: 'fault' },
+          { id: 'dev40', name: 'gd-device-40', type: null, group: 'guangdong', groupName: '/广东', status: 'online' },
+          { id: 'dev41', name: 'sh-device-41', type: null, group: 'shanghai', groupName: '/上海', status: 'online' },
+          { id: 'dev42', name: 'gz-device-42', type: '备', group: 'guangzhou', groupName: '/广东/广州办事处', status: 'online', masterId: 'dev28' },
+          { id: 'dev43', name: 'unc-device-43', type: null, group: 'uncategorized', groupName: '/未分类', status: 'offline' },
+          { id: 'dev44', name: 'sz-device-44', type: null, group: 'shenzhen', groupName: '/广东/深圳办事处', status: 'online' },
+          { id: 'dev45', name: 'dg-device-45', type: null, group: 'dongguan', groupName: '/广东/东莞办事处', status: 'online' },
+          { id: 'dev46', name: 'gx-device-46', type: '备', group: 'guangxi', groupName: '/广西', status: 'online', masterId: 'dev33' },
+          { id: 'dev47', name: 'gd-device-47', type: null, group: 'guangdong', groupName: '/广东', status: 'pending' },
+          { id: 'dev48', name: 'sh-device-48', type: null, group: 'shanghai', groupName: '/上海', status: 'online' },
+          { id: 'dev49', name: 'gz-device-49', type: null, group: 'guangzhou', groupName: '/广东/广州办事处', status: 'offline' },
+          { id: 'dev50', name: 'unc-device-50', type: null, group: 'uncategorized', groupName: '/未分类', status: 'online' },
+          { id: 'dev51', name: 'sz-device-51', type: null, group: 'shenzhen', groupName: '/广东/深圳办事处', status: 'fault' },
+          { id: 'dev52', name: 'dg-device-52', type: '备', group: 'dongguan', groupName: '/广东/东莞办事处', status: 'online', masterId: 'dev65' },
+          { id: 'dev53', name: 'gx-device-53', type: null, group: 'guangxi', groupName: '/广西', status: 'online' },
+          { id: 'dev54', name: 'gd-device-54', type: null, group: 'guangdong', groupName: '/广东', status: 'online' },
+          { id: 'dev55', name: 'sh-device-55', type: '主', group: 'shanghai', groupName: '/上海', status: 'online' },
+          { id: 'dev56', name: 'gz-device-56', type: null, group: 'guangzhou', groupName: '/广东/广州办事处', status: 'pending' },
+          { id: 'dev57', name: 'unc-device-57', type: null, group: 'uncategorized', groupName: '/未分类', status: 'offline' },
+          { id: 'dev58', name: 'sz-device-58', type: null, group: 'shenzhen', groupName: '/广东/深圳办事处', status: 'online' },
+          { id: 'dev59', name: 'dg-device-59', type: null, group: 'dongguan', groupName: '/广东/东莞办事处', status: 'online' },
+          { id: 'dev60', name: 'gx-device-60', type: null, group: 'guangxi', groupName: '/广西', status: 'offline' },
+          { id: 'dev61', name: 'gd-device-61', type: null, group: 'guangdong', groupName: '/广东', status: 'online' },
+          { id: 'dev62', name: 'sh-device-62', type: null, group: 'shanghai', groupName: '/上海', status: 'pending' },
+          { id: 'dev63', name: 'gz-device-63', type: '备', group: 'guangzhou', groupName: '/广东/广州办事处', status: 'online', masterId: 'dev55' },
+          { id: 'dev64', name: 'unc-device-64', type: null, group: 'uncategorized', groupName: '/未分类', status: 'online' },
+          { id: 'dev65', name: 'sz-device-65', type: '主', group: 'shenzhen', groupName: '/广东/深圳办事处', status: 'online' },
+          { id: 'dev66', name: 'dg-device-66', type: null, group: 'dongguan', groupName: '/广东/东莞办事处', status: 'fault' },
+          { id: 'dev67', name: 'gx-device-67', type: null, group: 'guangxi', groupName: '/广西', status: 'online' },
+          { id: 'dev68', name: 'gd-device-68', type: null, group: 'guangdong', groupName: '/广东', status: 'offline' },
+          { id: 'dev69', name: 'sh-device-69', type: null, group: 'shanghai', groupName: '/上海', status: 'online' },
+          { id: 'dev70', name: 'gz-device-70', type: null, group: 'guangzhou', groupName: '/广东/广州办事处', status: 'online' },
+        ],
+
+        // 基础版主备设备联动映射
+        basicMasterBackupMap: {
+          dev4: 'dev5',   dev5: 'dev4',
+          dev9: 'dev13',  dev13: 'dev9',
+          dev16: 'dev24', dev24: 'dev16',
+          dev20: 'dev34', dev34: 'dev20',
+          dev28: 'dev42', dev42: 'dev28',
+          dev33: 'dev46', dev46: 'dev33',
+          dev55: 'dev63', dev63: 'dev55',
+          dev65: 'dev52', dev52: 'dev65',
+        },
+
+        // ==========================================
+        // 配置项 2: SASE设备选择器状态 (Device 2)
+        // ==========================================
+        saseModalOpen: false,
+        saseSearchKeyword: '',
+        saseSelectedSearchKeyword: '',
+        saseCurrentPage: 1,
+        saseActiveGroupId: null,
+        saseSelectedDevices: [],
+        saseSelectedGroups: [],
+        saseDisabledGroups: [],   // 被级联禁用的后代分组ID列表
+        saseExpandedNodes: ['root', 'guangdong'],
+        saseConfirmedResult: {
+          deviceIds: [],
+          groupIds: []
+        },
+
+        // SASE版分组树
+        saseGroupTree: [
+          {
+            id: 'root', name: '全部设备', children: [
+              { id: 'uncategorized', name: '未分类', isLeaf: true },
+              { id: 'shanghai', name: '上海', isLeaf: true },
+              {
+                id: 'guangdong', name: '广东', children: [
+                  { id: 'guangzhou', name: '广州办事处', isLeaf: true },
+                  { id: 'shenzhen', name: '深圳办事处', isLeaf: true },
+                  { id: 'dongguan', name: '东莞办事处', isLeaf: true },
+                ]
+              },
+              { id: 'guangxi', name: '广西', isLeaf: true },
+            ]
+          }
+        ],
+
+        // SASE版模拟数据：60 台设备 (unc-1 到 gx-10)
+        saseDevices: [
+          // 未分类
+          { id: 'unc-1', name: 'unc-device-1', type: null, group: 'uncategorized', groupName: '未分类', status: 'online' },
+          { id: 'unc-2', name: 'unc-device-2', type: '主', group: 'uncategorized', groupName: '未分类', status: 'online', masterId: 'unc-3' },
+          { id: 'unc-3', name: 'unc-device-3', type: '备', group: 'uncategorized', groupName: '未分类', status: 'offline', masterId: 'unc-2' },
+          { id: 'unc-4', name: 'unc-device-4', type: null, group: 'uncategorized', groupName: '未分类', status: 'pending' },
+          { id: 'unc-5', name: 'unc-device-5', type: null, group: 'uncategorized', groupName: '未分类', status: 'fault' },
+          { id: 'unc-6', name: 'unc-device-6', type: null, group: 'uncategorized', groupName: '未分类', status: 'online' },
+          { id: 'unc-7', name: 'unc-device-7', type: null, group: 'uncategorized', groupName: '未分类', status: 'online' },
+          { id: 'unc-8', name: 'unc-device-8', type: '主', group: 'uncategorized', groupName: '未分类', status: 'online', masterId: 'unc-9' },
+          { id: 'unc-9', name: 'unc-device-9', type: '备', group: 'uncategorized', groupName: '未分类', status: 'offline', masterId: 'unc-8' },
+          { id: 'unc-10', name: 'unc-device-10', type: null, group: 'uncategorized', groupName: '未分类', status: 'online' },
+          // 上海
+          { id: 'sh-1', name: 'sh-device-1', type: null, group: 'shanghai', groupName: '上海', status: 'online' },
+          { id: 'sh-2', name: 'sh-device-2', type: '主', group: 'shanghai', groupName: '上海', status: 'online', masterId: 'sh-3' },
+          { id: 'sh-3', name: 'sh-device-3', type: '备', group: 'shanghai', groupName: '上海', status: 'offline', masterId: 'sh-2' },
+          { id: 'sh-4', name: 'sh-device-4', type: null, group: 'shanghai', groupName: '上海', status: 'pending' },
+          { id: 'sh-5', name: 'sh-device-5', type: null, group: 'shanghai', groupName: '上海', status: 'online' },
+          { id: 'sh-6', name: 'sh-device-6', type: null, group: 'shanghai', groupName: '上海', status: 'online' },
+          { id: 'sh-7', name: 'sh-device-7', type: '主', group: 'shanghai', groupName: '上海', status: 'fault', masterId: 'sh-8' },
+          { id: 'sh-8', name: 'sh-device-8', type: '备', group: 'shanghai', groupName: '上海', status: 'offline', masterId: 'sh-7' },
+          { id: 'sh-9', name: 'sh-device-9', type: null, group: 'shanghai', groupName: '上海', status: 'online' },
+          { id: 'sh-10', name: 'sh-device-10', type: null, group: 'shanghai', groupName: '上海', status: 'online' },
+          // 广州办事处
+          { id: 'gz-1', name: 'gz-device-1', type: '主', group: 'guangzhou', groupName: '广州办事处', status: 'online', masterId: 'gz-2' },
+          { id: 'gz-2', name: 'gz-device-2', type: '备', group: 'guangzhou', groupName: '广州办事处', status: 'offline', masterId: 'gz-1' },
+          { id: 'gz-3', name: 'gz-device-3', type: null, group: 'guangzhou', groupName: '广州办事处', status: 'online' },
+          { id: 'gz-4', name: 'gz-device-4', type: null, group: 'guangzhou', groupName: '广州办事处', status: 'pending' },
+          { id: 'gz-5', name: 'gz-device-5', type: '主', group: 'guangzhou', groupName: '广州办事处', status: 'online', masterId: 'gz-6' },
+          { id: 'gz-6', name: 'gz-device-6', type: '备', group: 'guangzhou', groupName: '广州办事处', status: 'offline', masterId: 'gz-5' },
+          { id: 'gz-7', name: 'gz-device-7', type: null, group: 'guangzhou', groupName: '广州办事处', status: 'online' },
+          { id: 'gz-8', name: 'gz-device-8', type: null, group: 'guangzhou', groupName: '广州办事处', status: 'fault' },
+          { id: 'gz-9', name: 'gz-device-9', type: null, group: 'guangzhou', groupName: '广州办事处', status: 'online' },
+          { id: 'gz-10', name: 'gz-device-10', type: null, group: 'guangzhou', groupName: '广州办事处', status: 'online' },
+          // 深圳办事处
+          { id: 'sz-1', name: 'sz-device-1', type: null, group: 'shenzhen', groupName: '深圳办事处', status: 'online' },
+          { id: 'sz-2', name: 'sz-device-2', type: '主', group: 'shenzhen', groupName: '深圳办事处', status: 'online', masterId: 'sz-3' },
+          { id: 'sz-3', name: 'sz-device-3', type: '备', group: 'shenzhen', groupName: '深圳办事处', status: 'offline', masterId: 'sz-2' },
+          { id: 'sz-4', name: 'sz-device-4', type: null, group: 'shenzhen', groupName: '深圳办事处', status: 'pending' },
+          { id: 'sz-5', name: 'sz-device-5', type: null, group: 'shenzhen', groupName: '深圳办事处', status: 'online' },
+          { id: 'sz-6', name: 'sz-device-6', type: null, group: 'shenzhen', groupName: '深圳办事处', status: 'online' },
+          { id: 'sz-7', name: 'sz-device-7', type: '主', group: 'shenzhen', groupName: '深圳办事处', status: 'fault', masterId: 'sz-8' },
+          { id: 'sz-8', name: 'sz-device-8', type: '备', group: 'shenzhen', groupName: '深圳办事处', status: 'offline', masterId: 'sz-7' },
+          { id: 'sz-9', name: 'sz-device-9', type: null, group: 'shenzhen', groupName: '深圳办事处', status: 'online' },
+          { id: 'sz-10', name: 'sz-device-10', type: null, group: 'shenzhen', groupName: '深圳办事处', status: 'online' },
+          // 东莞办事处
+          { id: 'dg-1', name: 'dg-device-1', type: null, group: 'dongguan', groupName: '东莞办事处', status: 'online' },
+          { id: 'dg-2', name: 'dg-device-2', type: '主', group: 'dongguan', groupName: '东莞办事处', status: 'online', masterId: 'dg-3' },
+          { id: 'dg-3', name: 'dg-device-3', type: '备', group: 'dongguan', groupName: '东莞办事处', status: 'offline', masterId: 'dg-2' },
+          { id: 'dg-4', name: 'dg-device-4', type: null, group: 'dongguan', groupName: '东莞办事处', status: 'online' },
+          { id: 'dg-5', name: 'dg-device-5', type: null, group: 'dongguan', groupName: '东莞办事处', status: 'pending' },
+          { id: 'dg-6', name: 'dg-device-6', type: null, group: 'dongguan', groupName: '东莞办事处', status: 'online' },
+          { id: 'dg-7', name: 'dg-device-7', type: '主', group: 'dongguan', groupName: '东莞办事处', status: 'online', masterId: 'dg-8' },
+          { id: 'dg-8', name: 'dg-device-8', type: '备', group: 'dongguan', groupName: '东莞办事处', status: 'offline', masterId: 'dg-7' },
+          { id: 'dg-9', name: 'dg-device-9', type: null, group: 'dongguan', groupName: '东莞办事处', status: 'online' },
+          { id: 'dg-10', name: 'dg-device-10', type: null, group: 'dongguan', groupName: '东莞办事处', status: 'fault' },
+          // 广西
+          { id: 'gx-1', name: 'gx-device-1', type: '主', group: 'guangxi', groupName: '广西', status: 'online', masterId: 'gx-2' },
+          { id: 'gx-2', name: 'gx-device-2', type: '备', group: 'guangxi', groupName: '广西', status: 'offline', masterId: 'gx-1' },
+          { id: 'gx-3', name: 'gx-device-3', type: null, group: 'guangxi', groupName: '广西', status: 'online' },
+          { id: 'gx-4', name: 'gx-device-4', type: null, group: 'guangxi', groupName: '广西', status: 'pending' },
+          { id: 'gx-5', name: 'gx-device-5', type: null, group: 'guangxi', groupName: '广西', status: 'online' },
+          { id: 'gx-6', name: 'gx-device-6', type: null, group: 'guangxi', groupName: '广西', status: 'online' },
+          { id: 'gx-7', name: 'gx-device-7', type: '主', group: 'guangxi', groupName: '广西', status: 'fault', masterId: 'gx-8' },
+          { id: 'gx-8', name: 'gx-device-8', type: '备', group: 'guangxi', groupName: '广西', status: 'offline', masterId: 'gx-7' },
+          { id: 'gx-9', name: 'gx-device-9', type: null, group: 'guangxi', groupName: '广西', status: 'online' },
+          { id: 'gx-10', name: 'gx-device-10', type: null, group: 'guangxi', groupName: '广西', status: 'online' },
+        ],
+
+        // SASE版主备设备联动映射
+        saseMasterBackupMap: {
+          'unc-2': 'unc-3', 'unc-3': 'unc-2',
+          'unc-8': 'unc-9', 'unc-9': 'unc-8',
+          'sh-2': 'sh-3', 'sh-3': 'sh-2',
+          'sh-7': 'sh-8', 'sh-8': 'sh-7',
+          'gz-1': 'gz-2', 'gz-2': 'gz-1',
+          'gz-5': 'gz-6', 'gz-6': 'gz-5',
+          'sz-2': 'sz-3', 'sz-3': 'sz-2',
+          'sz-7': 'sz-8', 'sz-8': 'sz-7',
+          'dg-2': 'dg-3', 'dg-3': 'dg-2',
+          'dg-7': 'dg-8', 'dg-8': 'dg-7',
+          'gx-1': 'gx-2', 'gx-2': 'gx-1',
+          'gx-7': 'gx-8', 'gx-8': 'gx-7',
+        },
+
+
+        // ========================================================
+        // 核心计算辅助方法 (设备 1 与 设备 2 分别维护)
+        // ========================================================
+
+        // --- 设备 1 (基础版) 计算辅助 ---
+        
+        basicFindTreeNode(nodes, id) {
+          for (const node of nodes) {
+            if (node.id === id) return node;
+            if (node.children) {
+              const found = this.basicFindTreeNode(node.children, id);
+              if (found) return found;
+            }
+          }
+          return null;
+        },
+
+        basicGetAllDevicesInGroup(groupId) {
+          if (groupId === 'root') {
+            return this.basicDevices.map(d => d.id);
+          }
+          const descendantIds = this.basicGetDescendantGroupIds(groupId);
+          const allGids = [groupId, ...descendantIds];
+          return this.basicDevices.filter(d => allGids.includes(d.group)).map(d => d.id);
+        },
+
+        basicGetDescendantGroupIds(groupId) {
+          const node = this.basicFindTreeNode(this.basicGroupTree, groupId);
+          if (!node || !node.children) return [];
+          const ids = [];
+          const walk = (n) => {
+            ids.push(n.id);
+            if (n.children) n.children.forEach(walk);
+          };
+          node.children.forEach(walk);
+          return ids;
+        },
+
+        basicGetAncestorGroupIds(groupId) {
+          const ancestors = [];
+          const walk = (nodes, target) => {
+            for (const node of nodes) {
+              if (node.id === target) return true;
+              if (node.children && walk(node.children, target)) {
+                ancestors.push(node.id);
+                return true;
+              }
+            }
+            return false;
+          };
+          walk(this.basicGroupTree, groupId);
+          return ancestors;
+        },
+
+        // 基础版级联禁用逻辑：如果父分组或祖先分组已被勾选，后代分组及对应设备就被自动禁用
+        basicIsGroupDisabled(groupId) {
+          if (groupId === 'root') return false;
+          const ancestors = this.basicGetAncestorGroupIds(groupId);
+          return ancestors.some(a => this.basicSelectedGroups.includes(a));
+        },
+
+        basicIsDeviceDisabledByGroup(device) {
+          if (this.basicSelectedGroups.includes(device.group)) return true;
+          const ancestors = this.basicGetAncestorGroupIds(device.group);
+          return ancestors.some(a => this.basicSelectedGroups.includes(a));
+        },
+
+        basicIsDeviceChecked(deviceId) {
+          if (this.basicSelectedDevices.includes(deviceId)) return true;
+          const device = this.basicDevices.find(d => d.id === deviceId);
+          if (!device) return false;
+          return this.basicIsDeviceDisabledByGroup(device);
+        },
+
+        basicIsAllSelected() {
+          const allIds = this.basicDevices.map(d => d.id);
+          return allIds.length > 0 && allIds.every(id => this.basicIsDeviceChecked(id));
+        },
+
+        basicIsHeaderIndeterminate() {
+          const allIds = this.basicDevices.map(d => d.id);
+          if (allIds.length === 0) return false;
+          const checkedCount = allIds.filter(id => this.basicIsDeviceChecked(id)).length;
+          return checkedCount > 0 && checkedCount < allIds.length;
+        },
+
+        basicGetEffectiveSelectedDeviceIds() {
+          const ids = new Set(this.basicSelectedDevices);
+          this.basicSelectedGroups.forEach(gid => {
+            this.basicGetAllDevicesInGroup(gid).forEach(id => ids.add(id));
+          });
+          return ids;
+        },
+
+        basicGetFilteredDevices() {
+          let result = this.basicDevices;
+          
+          // 树侧栏激活状态过滤
+          if (this.basicActiveGroupId) {
+            const groupAndDescendants = new Set();
+            groupAndDescendants.add(this.basicActiveGroupId);
+            this.basicGetDescendantGroupIds(this.basicActiveGroupId).forEach(id => groupAndDescendants.add(id));
+            result = result.filter(d => groupAndDescendants.has(d.group));
+          }
+
+          // 待选搜索过滤
+          if (!this.basicSearchKeyword.trim()) return result;
+          const kw = this.basicSearchKeyword.toLowerCase();
+          const matched = new Set();
+          result.forEach(d => {
+            if (d.name.toLowerCase().includes(kw) || d.groupName.toLowerCase().includes(kw)) {
+              matched.add(d.id);
+              const linked = this.basicMasterBackupMap[d.id];
+              if (linked) matched.add(linked);
+            }
+          });
+          return result.filter(d => matched.has(d.id));
+        },
+
+        basicGetSearchMatchedGroupIds() {
+          if (!this.basicSearchKeyword.trim()) return null;
+          const groupIds = new Set();
+          this.basicGetFilteredDevices().forEach(d => {
+            groupIds.add(d.group);
+            this.basicGetAncestorGroupIds(d.group).forEach(a => groupIds.add(a));
+          });
+          return groupIds;
+        },
+
+        basicGetEffectiveExpandedNodes() {
+          const matched = this.basicGetSearchMatchedGroupIds();
+          if (!matched) return this.basicExpandedNodes;
+          const nodes = new Set(['root']);
+          matched.forEach(gid => {
+            nodes.add(gid);
+            this.basicGetAncestorGroupIds(gid).forEach(a => nodes.add(a));
+          });
+          return Array.from(nodes);
+        },
+
+        basicGetFilteredRowGroups() {
+          const filtered = this.basicGetFilteredDevices();
+          const result = [];
+          const processed = new Set();
+
+          for (const device of filtered) {
+            if (processed.has(device.id)) continue;
+            const linkedId = this.basicMasterBackupMap[device.id];
+            if (linkedId) {
+              const partner = filtered.find(d => d.id === linkedId);
+              if (partner && !processed.has(partner.id)) {
+                if (device.type === '备') {
+                  result.push({ key: partner.id, devices: [partner, device] });
+                } else {
+                  result.push({ key: device.id, devices: [device, partner] });
+                }
+                processed.add(device.id);
+                processed.add(partner.id);
+              } else {
+                result.push({ key: device.id, devices: [device] });
+                processed.add(device.id);
+              }
+            } else {
+              result.push({ key: device.id, devices: [device] });
+              processed.add(device.id);
+            }
+          }
+          return result;
+        },
+
+        basicGetTotalPages() {
+          const rowGroups = this.basicGetFilteredRowGroups();
+          return Math.max(1, Math.ceil(rowGroups.length / 10));
+        },
+
+        basicGetPagedDevices() {
+          const rowGroups = this.basicGetFilteredRowGroups();
+          const totalPages = this.basicGetTotalPages();
+          const safePage = Math.min(this.basicCurrentPage, totalPages);
+          const start = (safePage - 1) * 10;
+          const pagedGroups = rowGroups.slice(start, start + 10);
+          return pagedGroups.flatMap(g => g.devices);
+        },
+
+        basicGetPageNumbers() {
+          const total = this.basicGetTotalPages();
+          const safePage = Math.min(this.basicCurrentPage, total);
+          const pages = [];
+          if (total <= 7) {
+            for (let i = 1; i <= total; i++) pages.push(i);
+          } else {
+            pages.push(1);
+            if (safePage > 4) pages.push('ellipsis');
+            const start = Math.max(2, safePage - 1);
+            const end = Math.min(total - 1, safePage + 1);
+            for (let i = start; i <= end; i++) pages.push(i);
+            if (safePage < total - 3) pages.push('ellipsis');
+            pages.push(total);
+          }
+          return pages;
+        },
+
+        basicGetFlattenedTree() {
+          const result = [];
+          const matchedGroupIds = this.basicGetSearchMatchedGroupIds();
+          const expanded = this.basicGetEffectiveExpandedNodes();
+
+          const walk = (nodes, depth = 0, parentLines = []) => {
+            nodes.forEach((node, index) => {
+              const isLast = index === nodes.length - 1;
+              const hasChildren = node.children && node.children.length > 0;
+              const isLeaf = node.isLeaf || !hasChildren;
+
+              if (matchedGroupIds && !matchedGroupIds.has(node.id)) {
+                return;
+              }
+
+              result.push({
+                id: node.id,
+                name: node.name,
+                depth: depth,
+                isLast: isLast,
+                isLeaf: isLeaf,
+                hasChildren: hasChildren,
+                parentLines: [...parentLines],
+                node: node
+              });
+
+              if (hasChildren && expanded.includes(node.id)) {
+                walk(node.children, depth + 1, [...parentLines, !isLast]);
+              }
+            });
+          };
+
+          walk(this.basicGroupTree);
+          return result;
+        },
+
+        basicGetOrderedSelectedDevices() {
+          const selectedDevs = this.basicDevices.filter(d => this.basicSelectedDevices.includes(d.id) && !this.basicIsDeviceDisabledByGroup(d));
+          
+          let filtered = selectedDevs;
+          if (this.basicSelectedSearchKeyword.trim()) {
+            const kw = this.basicSelectedSearchKeyword.toLowerCase();
+            filtered = filtered.filter(d => d.name.toLowerCase().includes(kw) || d.groupName.toLowerCase().includes(kw));
+          }
+
+          const result = [];
+          const processed = new Set();
+          for (const device of filtered) {
+            if (processed.has(device.id)) continue;
+            if (device.type === '主') {
+              result.push(device);
+              processed.add(device.id);
+              const backupId = this.basicMasterBackupMap[device.id];
+              if (backupId) {
+                const backup = filtered.find(d => d.id === backupId);
+                if (backup) {
+                  result.push(backup);
+                  processed.add(backup.id);
+                }
+              }
+            } else if (device.type === '备') {
+              const masterId = device.masterId;
+              const master = masterId ? filtered.find(d => d.id === masterId) : null;
+              if (!master) {
+                result.push(device);
+                processed.add(device.id);
+              }
+            } else {
+              result.push(device);
+              processed.add(device.id);
+            }
+          }
+          return result;
+        },
+
+        basicGetSelectedGroupEntries() {
+          const groups = this.basicSelectedGroups.map(gid => {
+            const node = this.basicFindTreeNode(this.basicGroupTree, gid);
+            const name = gid === 'root' ? '/' : (node ? node.name : gid);
+            const ancestorIds = this.basicGetAncestorGroupIds(gid);
+            let parentPath = '';
+            if (ancestorIds.length > 0) {
+              parentPath = '/' + ancestorIds.map(aid => {
+                if (aid === 'root') return '';
+                const n = this.basicFindTreeNode(this.basicGroupTree, aid);
+                return n ? n.name : aid;
+              }).filter(v => v !== '').reverse().join('/');
+            } else {
+              parentPath = '/';
+            }
+            return { id: gid, name, parentPath };
+          });
+
+          if (this.basicSelectedSearchKeyword.trim()) {
+            const kw = this.basicSelectedSearchKeyword.toLowerCase();
+            return groups.filter(g => g.name.toLowerCase().includes(kw));
+          }
+          return groups;
+        },
+
+        basicGetSelectedCount() {
+          const individualCount = this.basicDevices.filter(d => this.basicSelectedDevices.includes(d.id) && !this.basicIsDeviceDisabledByGroup(d)).length;
+          return this.basicSelectedGroups.length + individualCount;
+        },
+
+
+        // --- SASE版 计算辅助 ---
+        
+        saseFindTreeNode(nodes, id) {
+          for (const node of nodes) {
+            if (node.id === id) return node;
+            if (node.children) {
+              const found = this.saseFindTreeNode(node.children, id);
+              if (found) return found;
+            }
+          }
+          return null;
+        },
+
+        saseGetAllDevicesInGroup(groupId) {
+          if (groupId === 'root') {
+            return this.saseDevices.map(d => d.id);
+          }
+          const descendantIds = this.saseGetDescendantGroupIds(groupId);
+          const allGids = [groupId, ...descendantIds];
+          return this.saseDevices.filter(d => allGids.includes(d.group)).map(d => d.id);
+        },
+
+        saseGetDescendantGroupIds(groupId) {
+          const node = this.saseFindTreeNode(this.saseGroupTree, groupId);
+          if (!node || !node.children) return [];
+          const ids = [];
+          const walk = (n) => {
+            ids.push(n.id);
+            if (n.children) n.children.forEach(walk);
+          };
+          node.children.forEach(walk);
+          return ids;
+        },
+
+        saseGetAncestorGroupIds(groupId) {
+          const ancestors = [];
+          const walk = (nodes, target) => {
+            for (const node of nodes) {
+              if (node.id === target) return true;
+              if (node.children && walk(node.children, target)) {
+                ancestors.push(node.id);
+                return true;
+              }
+            }
+            return false;
+          };
+          walk(this.saseGroupTree, groupId);
+          return ancestors;
+        },
+
+        // SASE 双向不联动：左侧树子节点不被置灰禁用。仅在右侧表格和已选汇总中体现继承
+        saseIsDeviceDisabledByGroup(device) {
+          if (this.saseSelectedGroups.includes(device.group)) return true;
+          const ancestors = this.saseGetAncestorGroupIds(device.group);
+          return ancestors.some(a => this.saseSelectedGroups.includes(a));
+        },
+
+        saseIsDeviceChecked(deviceId) {
+          if (this.saseSelectedDevices.includes(deviceId)) return true;
+          const device = this.saseDevices.find(d => d.id === deviceId);
+          if (!device) return false;
+          return this.saseIsDeviceDisabledByGroup(device);
+        },
+
+        saseIsAllSelected() {
+          const allIds = this.saseDevices.map(d => d.id);
+          return allIds.length > 0 && allIds.every(id => this.saseIsDeviceChecked(id));
+        },
+
+        saseIsHeaderIndeterminate() {
+          const allIds = this.saseDevices.map(d => d.id);
+          if (allIds.length === 0) return false;
+          const checkedCount = allIds.filter(id => this.saseIsDeviceChecked(id)).length;
+          return checkedCount > 0 && checkedCount < allIds.length;
+        },
+
+        saseGetEffectiveSelectedDeviceIds() {
+          const ids = new Set(this.saseSelectedDevices);
+          this.saseSelectedGroups.forEach(gid => {
+            this.saseGetAllDevicesInGroup(gid).forEach(id => ids.add(id));
+          });
+          return ids;
+        },
+
+        saseGetFilteredDevices() {
+          let result = this.saseDevices;
+          if (this.saseActiveGroupId) {
+            const groupAndDescendants = new Set();
+            groupAndDescendants.add(this.saseActiveGroupId);
+            this.saseGetDescendantGroupIds(this.saseActiveGroupId).forEach(id => groupAndDescendants.add(id));
+            result = result.filter(d => groupAndDescendants.has(d.group));
+          }
+
+          if (!this.saseSearchKeyword.trim()) return result;
+          const kw = this.saseSearchKeyword.toLowerCase();
+          const matched = new Set();
+          result.forEach(d => {
+            if (d.name.toLowerCase().includes(kw) || d.groupName.toLowerCase().includes(kw)) {
+              matched.add(d.id);
+              const linked = this.saseMasterBackupMap[d.id];
+              if (linked) matched.add(linked);
+            }
+          });
+          return result.filter(d => matched.has(d.id));
+        },
+
+        saseGetSearchMatchedGroupIds() {
+          if (!this.saseSearchKeyword.trim()) return null;
+          const groupIds = new Set();
+          this.saseGetFilteredDevices().forEach(d => {
+            groupIds.add(d.group);
+            this.saseGetAncestorGroupIds(d.group).forEach(a => groupIds.add(a));
+          });
+          return groupIds;
+        },
+
+        saseGetEffectiveExpandedNodes() {
+          const matched = this.saseGetSearchMatchedGroupIds();
+          if (!matched) return this.saseExpandedNodes;
+          const nodes = new Set(['root']);
+          matched.forEach(gid => {
+            nodes.add(gid);
+            this.saseGetAncestorGroupIds(gid).forEach(a => nodes.add(a));
+          });
+          return Array.from(nodes);
+        },
+
+        saseGetFilteredRowGroups() {
+          const filtered = this.saseGetFilteredDevices();
+          const result = [];
+          const processed = new Set();
+
+          for (const device of filtered) {
+            if (processed.has(device.id)) continue;
+            const linkedId = this.saseMasterBackupMap[device.id];
+            if (linkedId) {
+              const partner = filtered.find(d => d.id === linkedId);
+              if (partner && !processed.has(partner.id)) {
+                if (device.type === '备') {
+                  result.push({ key: partner.id, devices: [partner, device] });
+                } else {
+                  result.push({ key: device.id, devices: [device, partner] });
+                }
+                processed.add(device.id);
+                processed.add(partner.id);
+              } else {
+                result.push({ key: device.id, devices: [device] });
+                processed.add(device.id);
+              }
+            } else {
+              result.push({ key: device.id, devices: [device] });
+              processed.add(device.id);
+            }
+          }
+          return result;
+        },
+
+        saseGetTotalPages() {
+          const rowGroups = this.saseGetFilteredRowGroups();
+          return Math.max(1, Math.ceil(rowGroups.length / 10));
+        },
+
+        saseGetPagedDevices() {
+          const rowGroups = this.saseGetFilteredRowGroups();
+          const totalPages = this.saseGetTotalPages();
+          const safePage = Math.min(this.saseCurrentPage, totalPages);
+          const start = (safePage - 1) * 10;
+          const pagedGroups = rowGroups.slice(start, start + 10);
+          return pagedGroups.flatMap(g => g.devices);
+        },
+
+        saseGetPageNumbers() {
+          const total = this.saseGetTotalPages();
+          const safePage = Math.min(this.saseCurrentPage, total);
+          const pages = [];
+          if (total <= 7) {
+            for (let i = 1; i <= total; i++) pages.push(i);
+          } else {
+            pages.push(1);
+            if (safePage > 4) pages.push('ellipsis');
+            const start = Math.max(2, safePage - 1);
+            const end = Math.min(total - 1, safePage + 1);
+            for (let i = start; i <= end; i++) pages.push(i);
+            if (safePage < total - 3) pages.push('ellipsis');
+            pages.push(total);
+          }
+          return pages;
+        },
+
+        saseGetFlattenedTree() {
+          const result = [];
+          const matchedGroupIds = this.saseGetSearchMatchedGroupIds();
+          const expanded = this.saseGetEffectiveExpandedNodes();
+
+          const walk = (nodes, depth = 0, parentLines = []) => {
+            nodes.forEach((node, index) => {
+              const isLast = index === nodes.length - 1;
+              const hasChildren = node.children && node.children.length > 0;
+              const isLeaf = node.isLeaf || !hasChildren;
+
+              if (matchedGroupIds && !matchedGroupIds.has(node.id)) {
+                return;
+              }
+
+              result.push({
+                id: node.id,
+                name: node.name,
+                depth: depth,
+                isLast: isLast,
+                isLeaf: isLeaf,
+                hasChildren: hasChildren,
+                parentLines: [...parentLines],
+                node: node
+              });
+
+              if (hasChildren && expanded.includes(node.id)) {
+                walk(node.children, depth + 1, [...parentLines, !isLast]);
+              }
+            });
+          };
+
+          walk(this.saseGroupTree);
+          return result;
+        },
+
+        saseGetOrderedSelectedDevices() {
+          const selectedDevs = this.saseDevices.filter(d => this.saseSelectedDevices.includes(d.id) && !this.saseIsDeviceDisabledByGroup(d));
+          
+          let filtered = selectedDevs;
+          if (this.saseSelectedSearchKeyword.trim()) {
+            const kw = this.saseSelectedSearchKeyword.toLowerCase();
+            filtered = filtered.filter(d => d.name.toLowerCase().includes(kw) || d.groupName.toLowerCase().includes(kw));
+          }
+
+          const result = [];
+          const processed = new Set();
+          for (const device of filtered) {
+            if (processed.has(device.id)) continue;
+            if (device.type === '主') {
+              result.push(device);
+              processed.add(device.id);
+              const backupId = this.saseMasterBackupMap[device.id];
+              if (backupId) {
+                const backup = filtered.find(d => d.id === backupId);
+                if (backup) {
+                  result.push(backup);
+                  processed.add(backup.id);
+                }
+              }
+            } else if (device.type === '备') {
+              const masterId = device.masterId;
+              const master = masterId ? filtered.find(d => d.id === masterId) : null;
+              if (!master) {
+                result.push(device);
+                processed.add(device.id);
+              }
+            } else {
+              result.push(device);
+              processed.add(device.id);
+            }
+          }
+          return result;
+        },
+
+        saseGetSelectedGroupEntries() {
+          const groups = this.saseSelectedGroups.map(gid => {
+            const node = this.saseFindTreeNode(this.saseGroupTree, gid);
+            const name = gid === 'root' ? '全部设备' : (node ? node.name : gid);
+            const ancestorIds = this.saseGetAncestorGroupIds(gid);
+            let parentPath = '';
+            if (ancestorIds.length > 0) {
+              parentPath = '/' + ancestorIds.map(aid => {
+                if (aid === 'root') return '全部设备';
+                const n = this.saseFindTreeNode(this.saseGroupTree, aid);
+                return n ? n.name : aid;
+              }).reverse().join('/');
+            } else {
+              parentPath = gid === 'root' ? '' : '/';
+            }
+            return { id: gid, name, parentPath };
+          });
+
+          if (this.saseSelectedSearchKeyword.trim()) {
+            const kw = this.saseSelectedSearchKeyword.toLowerCase();
+            return groups.filter(g => g.name.toLowerCase().includes(kw));
+          }
+          return groups;
+        },
+
+        saseGetSelectedCount() {
+          const individualCount = this.saseDevices.filter(d => this.saseSelectedDevices.includes(d.id) && !this.saseIsDeviceDisabledByGroup(d)).length;
+          return this.saseSelectedGroups.length + individualCount;
+        },
+
+
+        // ========================================================
+        // 交互操作方法 (设备 1 与 设备 2 分别维护)
+        // ========================================================
+
+        // --- 设备 1 (基础版) 交互 ---
+        
+        basicOpenModal() {
+          this.basicModalOpen = true;
+          this.basicSearchKeyword = '';
+          this.basicSelectedSearchKeyword = '';
+          this.basicCurrentPage = 1;
+          this.basicActiveGroupId = null;
+
+          // 重新同步到当前已确认的状态
+          this.basicSelectedGroups = [...this.basicConfirmedResult.groupIds];
+          
+          const confirmedSet = new Set(this.basicConfirmedResult.deviceIds);
+          const temp = [];
+          confirmedSet.forEach(id => {
+            const d = this.basicDevices.find(dev => dev.id === id);
+            if (d && !this.basicIsDeviceDisabledByGroup(d)) {
+              temp.push(id);
+            }
+          });
+          this.basicSelectedDevices = temp;
+          this.basicRecalculateDisabledGroups();
+        },
+
+        basicToggleExpand(nodeId) {
+          const idx = this.basicExpandedNodes.indexOf(nodeId);
+          if (idx !== -1) {
+            this.basicExpandedNodes = this.basicExpandedNodes.filter(id => id !== nodeId);
+          } else {
+            this.basicExpandedNodes = [...this.basicExpandedNodes, nodeId];
+          }
+        },
+
+        basicToggleGroup(groupId) {
+          const idx = this.basicSelectedGroups.indexOf(groupId);
+          const descendantIds = this.basicGetDescendantGroupIds(groupId);
+          const allDeviceIds = this.basicGetAllDevicesInGroup(groupId);
+
+          if (idx !== -1) {
+            // 取消勾选
+            this.basicSelectedGroups = this.basicSelectedGroups.filter(id => id !== groupId);
+            // 基础版规则：取消勾选时，彻底移出该组下所有设备的个体选中
+            this.basicSelectedDevices = this.basicSelectedDevices.filter(id => !allDeviceIds.includes(id));
+          } else {
+            // 勾选
+            this.basicSelectedGroups = [...this.basicSelectedGroups, groupId];
+            // 基础版规则：已被分组级联包含的个体设备勾选自动被清理
+            this.basicSelectedDevices = this.basicSelectedDevices.filter(id => !allDeviceIds.includes(id));
+            
+            // 将后代选中状态移除 (因为父级已被选中，后代自动取消独立选中并禁用)
+            descendantIds.forEach(did => {
+              this.basicSelectedGroups = this.basicSelectedGroups.filter(id => id !== did);
+            });
+          }
+          this.basicRecalculateDisabledGroups();
+        },
+
+        basicToggleDevice(deviceId) {
+          const device = this.basicDevices.find(d => d.id === deviceId);
+          if (!device || this.basicIsDeviceDisabledByGroup(device)) return;
+
+          const idx = this.basicSelectedDevices.indexOf(deviceId);
+          const linkedId = this.basicMasterBackupMap[deviceId];
+
+          if (idx !== -1) {
+            this.basicSelectedDevices = this.basicSelectedDevices.filter(id => id !== deviceId);
+            if (linkedId) {
+              this.basicSelectedDevices = this.basicSelectedDevices.filter(id => id !== linkedId);
+            }
+          } else {
+            this.basicSelectedDevices = [...this.basicSelectedDevices, deviceId];
+            if (linkedId && !this.basicSelectedDevices.includes(linkedId)) {
+              this.basicSelectedDevices = [...this.basicSelectedDevices, linkedId];
+            }
+          }
+        },
+
+        basicToggleSelectAll() {
+          const allDevIds = this.basicDevices.map(d => d.id);
+          if (this.basicIsAllSelected()) {
+            this.basicSelectedDevices = [];
+            this.basicSelectedGroups = [];
+            this.basicDisabledGroups = [];
+          } else {
+            this.basicSelectedDevices = [...allDevIds];
+            this.basicSelectedGroups = [];
+            this.basicDisabledGroups = [];
+          }
+        },
+
+        basicRemoveSelected(id, type) {
+          if (type === 'group') {
+            this.basicSelectedGroups = this.basicSelectedGroups.filter(gid => gid !== id);
+            const allDeviceIds = this.basicGetAllDevicesInGroup(id);
+            this.basicSelectedDevices = this.basicSelectedDevices.filter(did => !allDeviceIds.includes(did));
+          } else {
+            this.basicSelectedDevices = this.basicSelectedDevices.filter(did => did !== id);
+            const linked = this.basicMasterBackupMap[id];
+            if (linked) {
+              this.basicSelectedDevices = this.basicSelectedDevices.filter(did => did !== linked);
+            }
+          }
+          this.basicRecalculateDisabledGroups();
+        },
+
+        basicClearAll() {
+          this.basicSelectedDevices = [];
+          this.basicSelectedGroups = [];
+          this.basicDisabledGroups = [];
+        },
+
+        basicRecalculateDisabledGroups() {
+          const disabled = new Set();
+          this.basicSelectedGroups.forEach(gid => {
+            this.basicGetDescendantGroupIds(gid).forEach(id => disabled.add(id));
+          });
+          this.basicDisabledGroups = Array.from(disabled);
+        },
+
+        basicHandleConfirm() {
+          this.basicConfirmedResult.deviceIds = Array.from(this.basicGetEffectiveSelectedDeviceIds());
+          this.basicConfirmedResult.groupIds = [...this.basicSelectedGroups];
+          this.basicModalOpen = false;
+        },
+
+        basicHandleCancel() {
+          this.basicModalOpen = false;
+        },
+
+        basicGetConfirmedCount() {
+          const ids = new Set(this.basicConfirmedResult.deviceIds);
+          this.basicConfirmedResult.groupIds.forEach(gid => {
+            this.basicGetAllDevicesInGroup(gid).forEach(id => ids.add(id));
+          });
+          return ids.size;
+        },
+
+        basicGetDisplayText() {
+          const items = [];
+          this.basicConfirmedResult.groupIds.forEach(gid => {
+            const group = this.basicFindTreeNode(this.basicGroupTree, gid);
+            if (group) {
+              items.push(group.name === 'root' ? '/' : group.name);
+            }
+          });
+          this.basicConfirmedResult.deviceIds.forEach(did => {
+            const device = this.basicDevices.find(d => d.id === did);
+            if (device && !this.basicConfirmedResult.groupIds.includes(device.group)) {
+              const ancestors = this.basicGetAncestorGroupIds(device.group);
+              const isParentGroupSelected = ancestors.some(a => this.basicConfirmedResult.groupIds.includes(a));
+              if (!isParentGroupSelected) {
+                items.push(device.name);
+              }
+            }
+          });
+
+          if (items.length === 0) return '';
+          if (items.length <= 3) return items.join(', ');
+          return items.slice(0, 3).join(', ') + '...等' + items.length + '项';
+        },
+
+
+        // --- 设备 2 (SASE版) 交互 ---
+        
+        saseOpenModal() {
+          this.saseModalOpen = true;
+          this.saseSearchKeyword = '';
+          this.saseSelectedSearchKeyword = '';
+          this.saseCurrentPage = 1;
+          this.saseActiveGroupId = null;
+
+          // 重新同步到当前已确认的状态
+          this.saseSelectedGroups = [...this.saseConfirmedResult.groupIds];
+          const confirmedSet = new Set(this.saseConfirmedResult.deviceIds);
+          const temp = [];
+          confirmedSet.forEach(id => {
+            const d = this.saseDevices.find(dev => dev.id === id);
+            if (d && !this.saseIsDeviceDisabledByGroup(d)) {
+              temp.push(id);
+            }
+          });
+          this.saseSelectedDevices = temp;
+          this.saseRecalculateDisabledGroups();
+        },
+
+        saseToggleExpand(nodeId) {
+          const idx = this.saseExpandedNodes.indexOf(nodeId);
+          if (idx !== -1) {
+            this.saseExpandedNodes = this.saseExpandedNodes.filter(id => id !== nodeId);
+          } else {
+            this.saseExpandedNodes = [...this.saseExpandedNodes, nodeId];
+          }
+        },
+
+        saseToggleGroup(groupId) {
+          const idx = this.saseSelectedGroups.indexOf(groupId);
+          const descendantIds = this.saseGetDescendantGroupIds(groupId);
+          const allDeviceIds = this.saseGetAllDevicesInGroup(groupId);
+
+          if (idx !== -1) {
+            // 取消勾选
+            this.saseSelectedGroups = this.saseSelectedGroups.filter(id => id !== groupId);
+            this.saseSelectedDevices = this.saseSelectedDevices.filter(id => !allDeviceIds.includes(id));
+          } else {
+            // 勾选
+            this.saseSelectedGroups = [...this.saseSelectedGroups, groupId];
+            this.saseSelectedDevices = this.saseSelectedDevices.filter(id => !allDeviceIds.includes(id));
+            
+            // 将后代选中状态移除
+            descendantIds.forEach(did => {
+              this.saseSelectedGroups = this.saseSelectedGroups.filter(id => id !== did);
+            });
+          }
+          this.saseRecalculateDisabledGroups();
+        },
+
+        saseToggleDevice(deviceId) {
+          const device = this.saseDevices.find(d => d.id === deviceId);
+          if (!device || this.saseIsDeviceDisabledByGroup(device)) return;
+
+          const idx = this.saseSelectedDevices.indexOf(deviceId);
+          const linkedId = this.saseMasterBackupMap[deviceId];
+
+          if (idx !== -1) {
+            this.saseSelectedDevices = this.saseSelectedDevices.filter(id => id !== deviceId);
+            if (linkedId) {
+              this.saseSelectedDevices = this.saseSelectedDevices.filter(id => id !== linkedId);
+            }
+          } else {
+            this.saseSelectedDevices = [...this.saseSelectedDevices, deviceId];
+            if (linkedId && !this.saseSelectedDevices.includes(linkedId)) {
+              this.saseSelectedDevices = [...this.saseSelectedDevices, linkedId];
+            }
+          }
+        },
+
+        saseToggleSelectAll() {
+          const allDevIds = this.saseDevices.map(d => d.id);
+          if (this.saseIsAllSelected()) {
+            this.saseSelectedDevices = [];
+            this.saseSelectedGroups = [];
+            this.saseDisabledGroups = [];
+          } else {
+            this.saseSelectedDevices = [...allDevIds];
+            this.saseSelectedGroups = [];
+            this.saseDisabledGroups = [];
+          }
+        },
+
+        saseRemoveSelected(id, type) {
+          if (type === 'group') {
+            this.saseSelectedGroups = this.saseSelectedGroups.filter(gid => gid !== id);
+            const allDeviceIds = this.saseGetAllDevicesInGroup(id);
+            this.saseSelectedDevices = this.saseSelectedDevices.filter(did => !allDeviceIds.includes(did));
+          } else {
+            this.saseSelectedDevices = this.saseSelectedDevices.filter(did => did !== id);
+            const linked = this.saseMasterBackupMap[id];
+            if (linked) {
+              this.saseSelectedDevices = this.saseSelectedDevices.filter(did => did !== linked);
+            }
+          }
+          this.saseRecalculateDisabledGroups();
+        },
+
+        saseClearAll() {
+          this.saseSelectedDevices = [];
+          this.saseSelectedGroups = [];
+          this.saseDisabledGroups = [];
+        },
+
+        saseRecalculateDisabledGroups() {
+          const disabled = new Set();
+          this.saseSelectedGroups.forEach(gid => {
+            this.saseGetDescendantGroupIds(gid).forEach(id => disabled.add(id));
+          });
+          this.saseDisabledGroups = Array.from(disabled);
+        },
+
+        saseIsGroupDisabled(groupId) {
+          if (groupId === 'root') return false;
+          const ancestors = this.saseGetAncestorGroupIds(groupId);
+          return ancestors.some(a => this.saseSelectedGroups.includes(a));
+        },
+
+        saseHandleConfirm() {
+          this.saseConfirmedResult.deviceIds = Array.from(this.saseGetEffectiveSelectedDeviceIds());
+          this.saseConfirmedResult.groupIds = [...this.saseSelectedGroups];
+          this.saseModalOpen = false;
+        },
+
+        saseHandleCancel() {
+          this.saseModalOpen = false;
+        },
+
+        saseGetConfirmedCount() {
+          const ids = new Set(this.saseConfirmedResult.deviceIds);
+          this.saseConfirmedResult.groupIds.forEach(gid => {
+            this.saseGetAllDevicesInGroup(gid).forEach(id => ids.add(id));
+          });
+          return ids.size;
+        },
+
+        saseGetDisplayText() {
+          const items = [];
+          this.saseConfirmedResult.groupIds.forEach(gid => {
+            const group = this.saseFindTreeNode(this.saseGroupTree, gid);
+            if (group) {
+              items.push(group.name);
+            }
+          });
+          this.saseConfirmedResult.deviceIds.forEach(did => {
+            const device = this.saseDevices.find(d => d.id === did);
+            if (device && !this.saseConfirmedResult.groupIds.includes(device.group)) {
+              const ancestors = this.saseGetAncestorGroupIds(device.group);
+              const isParentGroupSelected = ancestors.some(a => this.saseConfirmedResult.groupIds.includes(a));
+              if (!isParentGroupSelected) {
+                items.push(device.name);
+              }
+            }
+          });
+
+          if (items.length === 0) return '';
+          if (items.length <= 3) return items.join(', ');
+          return items.slice(0, 3).join(', ') + '...等' + items.length + '项';
+        },
+
+        // --- 全局重置 ---
+        resetForm() {
+          this.policyName = 'GENAI 终端准入控制策略';
+          this.policyAction = 'allow';
+          this.basicConfirmedResult = { deviceIds: [], groupIds: [] };
+          this.saseConfirmedResult = { deviceIds: [], groupIds: [] };
+        }
+      }
+    }
+  </script>
+
+</body>
+
+</html>

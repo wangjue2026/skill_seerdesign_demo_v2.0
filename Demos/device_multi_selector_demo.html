@@ -1,36 +1,64 @@
-# SASE 设备多选选择器 (SASE Device Multi-Selector)
+<!DOCTYPE html>
+<html lang="zh-CN">
 
-## ⚠️ 高频违规速查（生成/复用代码前必看）
+<head>
+  <meta charset="UTF-8">
+  <title>设备多选-基础版 效果预览</title>
 
-> AI 在生成或复用本组件代码前，必须先逐行核对此表，确保完全符合设计和性能标准。
+  <!-- 引入 Google Fonts 字体库 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
 
-| 规则 | ✅ 正确 | ❌ 常见错误 |
-|:---|:---|:---|
-| **树与对象联动 (性能关键)** | **双向不联动**：子对象（表格设备）勾选后，左侧分组树**不显示**选中或半选状态，仅用作过滤器。 | 勾选设备后，左侧树跟着变为选中或半选（大数据量下直接导致界面卡死）。 |
-| **树内节点级联禁用** | **级联禁用**：勾选父分组后，其所有后代分组的复选框被置为未选中，树节点置灰 (opacity 0.4) 并禁用 (pointer-events: none)，提示已被父级选中。 | 勾选父分组后子分组仍处于可勾选状态，未被置灰或禁用。 |
-| **表单 Label 文案** | 必须为 **选择设备** | 使用“设备”或“设备选择”。 |
-| **表单 Label 布局** | **左对齐**，字号 12px/400，颜色 `#6F7785` | 右对齐、居中，或字号和颜色不符合规范。 |
-| **主备设备联动** | 勾选主/备关系中的任意一台，其关联设备**自动同步勾选**。在已选列表中，备设备缩进并紧跟在主设备下方。 | 主备设备各自独立勾选，或备设备在列表中乱序。 |
-| **继承禁用逻辑** | 勾选分组后，其底下的子分组及对应设备**自动禁用**且视为默认选中，提示“该对象所属的父级已被选中，无需单独选择”。 | 勾选父分组后子树/子设备没有禁用，导致多余的冗余数据传输。 |
-| **弹窗物理尺寸** | 固定宽高为 **1200px x 640px** | 使用不固定宽度或 `max-w` 自适应高度，导致多页时页面跳动。 |
+  <!-- 引入 Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'PingFang SC', 'sans-serif'],
+            outfit: ['Outfit', 'sans-serif'],
+          },
+          borderRadius: {
+            'control': '2px',         // 控件圆角 2px
+            'container': '4px',       // 容器卡片圆角 4px
+          }
+        }
+      }
+    }
+  </script>
 
----
+  <!-- 引入 SeerDesign 全局样式与覆盖类名 -->
+  <link rel="stylesheet" href="../assets/css-overrides.css?v=2">
 
-## 业务规范说明
+  <!-- 引入 Alpine.js 用于交互渲染 -->
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 
-SASE 设备多选选择器主要用于管理大批量网络节点、网关和终端设备的场景。该组件包含两部分：
-1. **表单展示区**：展示 “选择设备” Label 以及触发弹窗的点击选择框（显示已选摘要）。
-2. **多选弹出层 (1200x640)**：采用三栏式设计，左侧为分组树，中间为设备分页列表，右侧为已选汇总清单。
+  <style>
+    /* 滚动条样式美化 */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
 
----
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: rgba(120, 130, 145, 0.3);
+      border-radius: 3px;
+    }
 
-## 完整复用代码块
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+  </style>
+</head>
 
-> 以下为开箱即用的完整 HTML、Alpine.js 与 CSS 实现。可以直接复制到页面中使用。
+<body class="bg-[#F7F9FC] text-[#2F3540] font-sans overflow-hidden w-screen h-screen">
 
-```html
-<!-- SASE 设备选择器容器 (Alpine.js 状态管理) -->
-<div x-data="{
+  <!-- 顶层 Alpine.js 状态管理容器 -->
+  <div class="flex w-screen h-screen overflow-hidden" x-data="{
          // 弹窗显隐控制
          modalOpen: false,
 
@@ -174,23 +202,6 @@ SASE 设备多选选择器主要用于管理大批量网络节点、网关和终
            return null;
          },
 
-         // 检查分组是否被选中
-         isGroupChecked(groupId) {
-           return this.selectedGroups.includes(groupId);
-         },
-
-         // 检查分组是否被级联禁用
-         isGroupDisabled(groupId) {
-           if (groupId === 'root') return false;
-           const ancestors = this.getAncestorGroupIds(groupId);
-           return ancestors.some(a => this.selectedGroups.includes(a));
-         },
-
-         // 检查分组是否处于半选 (部分选中) 状态 (无联动，始终返回 false)
-         isGroupIndeterminate(groupId) {
-           return false;
-         },
-
          // 获取当前分组下的所有设备 ID
          getAllDevicesInGroup(groupId) {
            return this.devices.filter(d => d.group === groupId).map(d => d.id);
@@ -243,6 +254,15 @@ SASE 设备多选选择器主要用于管理大批量网络节点、网关和终
            return ancestors.some(a => this.selectedGroups.includes(a));
          },
 
+         // 检查分组是否被选中 (无联动，仅根据该分组本身是否在选中列表中判断)
+         isGroupChecked(groupId) {
+           return this.selectedGroups.includes(groupId);
+         },
+
+         // 检查分组是否处于半选 (部分选中) 状态 (无联动，始终返回 false)
+         isGroupIndeterminate(groupId) {
+           return false;
+         },
 
          // 检查表头全选框是否半选
          isHeaderIndeterminate() {
@@ -673,7 +693,7 @@ SASE 设备多选选择器主要用于管理大批量网络节点、网关和终
       <div class="border border-[#D3D7DE] rounded-container p-6 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
         <div class="flex items-center gap-4">
           <span
-            class="text-xs text-[#6F7785] w-[72px] text-left font-normal flex-shrink-0">选择设备</span>
+            class="text-[12px] leading-[20px] text-[#6F7785] flex-shrink-0 w-[56px] text-right font-medium">选择设备</span>
 
           <!-- 点击触发弹窗的选择框 (高 32px) -->
           <div
@@ -681,7 +701,7 @@ SASE 设备多选选择器主要用于管理大批量网络节点、网关和终
             @click="modalOpen = true">
             <!-- 未选中文本 -->
             <template x-if="getDisplayText() === ''">
-              <span class="text-xs text-[#A1A7B3]">请选择</span>
+              <span class="text-[12px] leading-[20px] text-[#A1A7B3]">请选择设备</span>
             </template>
             <!-- 已选中文本 -->
             <template x-if="getDisplayText() !== ''">
@@ -763,90 +783,95 @@ SASE 设备多选选择器主要用于管理大批量网络节点、网关和终
                 <div class="flex-1 overflow-y-auto custom-scrollbar py-1">
 
                   <template x-for="item in getFlattenedTree()" :key="item.id">
-                    <div class="flex items-center h-[32px] cursor-pointer relative"
-                      :class="isGroupDisabled(item.id) ? 'opacity-40 pointer-events-none' : 'hover:bg-[#F7F9FC]'"
+                    <div class="flex items-center h-[32px] cursor-pointer relative hover:bg-[#F7F9FC]"
                       :style="activeGroupId === item.id || selectedGroups.includes(item.id) ? 'background-color: #E8F4FF;' : ''"
-                      @click="if(!isGroupDisabled(item.id)) activeGroupId = (activeGroupId === item.id ? null : item.id)">
+                      @click="activeGroupId = (activeGroupId === item.id ? null : item.id)">
 
                       <!-- 选中态左侧3px蓝色竖条 -->
                       <template x-if="activeGroupId === item.id || selectedGroups.includes(item.id)">
-                        <span class="absolute left-0 top-0 bottom-0 w-[3px] rounded-r bg-[#1C6EFF] z-10"></span>
+                        <span class="absolute left-0 top-0 bottom-0 w-[3px] rounded-r bg-[#1C6EFF]"></span>
                       </template>
 
                       <!-- 树连线渲染 -->
-                      <span class="flex shrink-0 items-start" :style="'width: ' + (item.depth * 24) + 'px'">
+                      <span class="flex shrink-0 items-start" :style="'width: ' + (item.depth * 20) + 'px'">
                         <template x-for="showLine in item.parentLines">
-                          <span class="relative shrink-0" style="width: 24px; height: 32px;">
-                            <span x-show="showLine" class="absolute w-px bg-[#E1E5EB]" style="left: 12px; top: 0; bottom: 0;"></span>
+                          <span class="relative shrink-0" style="width: 20px; height: 32px;">
+                            <span x-show="showLine" class="absolute w-px bg-[#E1E5EB]"
+                              style="left: 10px; top: 0; bottom: 0;"></span>
                           </span>
                         </template>
                         <template x-if="item.depth > 0">
-                          <span class="relative shrink-0" style="width: 24px; height: 32px;">
-                            <span class="absolute w-px bg-[#E1E5EB]" :style="'left: 12px; top: 0; height: ' + (item.isLast ? '16px' : '100%')"></span>
-                            <span class="absolute h-px bg-[#E1E5EB]" style="left: 12px; top: 16px; width: 12px;"></span>
+                          <span class="relative shrink-0" style="width: 20px; height: 32px;">
+                            <span class="absolute w-px bg-[#E1E5EB]"
+                              :style="'left: 10px; top: 0; height: ' + (item.isLast ? '16px' : '100%')"></span>
+                            <span class="absolute h-px bg-[#E1E5EB]" style="left: 10px; top: 16px; width: 10px;"></span>
                           </span>
                         </template>
                       </span>
 
-                      <!-- 展开/收起按钮 (+/-方形按钮) -->
-                      <span class="w-5 h-5 flex items-center justify-center shrink-0 z-10" @click.stop="if(item.hasChildren && !isGroupDisabled(item.id)) toggleExpand(item.id)">
+                      <!-- 展开/收起按钮 (方形加减号样式，符合 SeerDesign 规范) -->
+                      <span class="w-5 h-5 flex items-center justify-center shrink-0"
+                        @click.stop="if(item.hasChildren) toggleExpand(item.id)">
                         <template x-if="item.hasChildren">
-                          <div class="w-4 h-4 flex items-center justify-center rounded-control border border-[#D3D7DE] select-none cursor-pointer"
-                               :style="item.id === 'root' ? 'background-color: #F7F9FC;' : 'background-color: white;'">
+                          <div
+                            class="w-3.5 h-3.5 flex items-center justify-center rounded-[2px] bg-[#EDF1F7] select-none cursor-pointer">
                             <template x-if="getEffectiveExpandedNodes().includes(item.id)">
                               <!-- 减号 -->
-                              <svg class="w-2.5 h-2.5 text-[#454C59]" viewBox="0 0 10 10" fill="none">
-                                <path d="M1.5 5H8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                              <svg class="w-2 h-2 text-[#5E6573]" viewBox="0 0 10 10" fill="none">
+                                <path d="M1.5 5H8.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
                               </svg>
                             </template>
                             <template x-if="!getEffectiveExpandedNodes().includes(item.id)">
                               <!-- 加号 -->
-                              <svg class="w-2.5 h-2.5 text-[#454C59]" viewBox="0 0 10 10" fill="none">
-                                <path d="M1.5 5H8.5M5 1.5V8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                              <svg class="w-2 h-2 text-[#5E6573]" viewBox="0 0 10 10" fill="none">
+                                <path d="M1.5 5H8.5M5 1.5V8.5" stroke="currentColor" stroke-width="1.2"
+                                  stroke-linecap="round" />
                               </svg>
                             </template>
                           </div>
                         </template>
                         <template x-if="!item.hasChildren">
-                          <span class="w-1 h-1 rounded-full bg-[#E1E5EB]"></span>
+                          <span class="w-1 h-1 rounded-full bg-[#D3D7DE]"></span>
                         </template>
                       </span>
 
-                      <!-- 复选框 -->
-                      <div class="shrink-0 mr-1.5 z-10" @click.stop>
-                        <template x-if="isGroupDisabled(item.id)">
-                          <div class="relative group/tooltip pointer-events-auto">
-                            <div class="w-3.5 h-3.5 border border-[#D3D7DE] bg-[#E1E5EB] rounded-control flex items-center justify-center cursor-not-allowed"></div>
-                            
-                            <!-- 悬浮 Tooltip 容器 -->
-                            <div class="tooltip-panel absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden bg-[#2F3540] text-white text-[10px] rounded-[2px] px-2 py-1 whitespace-nowrap z-50 shadow-md">
-                              该对象所属的父级已被选中，无需单独选择
-                            </div>
-                          </div>
-                        </template>
-
-                        <template x-if="!isGroupDisabled(item.id)">
-                          <div class="w-3.5 h-3.5 border rounded-control flex items-center justify-center cursor-pointer transition-colors"
-                               :class="selectedGroups.includes(item.id) ? 'bg-[#1C6EFF] border-[#1C6EFF]' : 'border-[#D3D7DE] bg-white hover:border-[#1C6EFF]'"
-                               @click="toggleGroup(item.id)">
-                            <template x-if="selectedGroups.includes(item.id)">
-                              <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="20 6 9 17 4 12"></polyline>
-                              </svg>
-                            </template>
-                          </div>
-                        </template>
+                      <!-- 复选框 (支持选中与半选状态) -->
+                      <div class="shrink-0 mr-1.5" @click.stop>
+                        <div class="w-3.5 h-3.5 border rounded-[2px] flex items-center justify-center transition-colors"
+                          :class="isGroupChecked(item.id) || isGroupIndeterminate(item.id) ? 'bg-[#1C6EFF] border-[#1C6EFF]' : 'border-[#D3D7DE] bg-white hover:border-[#1C6EFF]'"
+                          :style="disabledGroups.includes(item.id) ? 'background-color: #EDF1F7; border-color: #D3D7DE; cursor: not-allowed; opacity: 0.5;' : 'cursor: pointer;'"
+                          @click="if(!disabledGroups.includes(item.id)) toggleGroup(item.id)">
+                          <!-- 全选 -->
+                          <template x-if="isGroupChecked(item.id)">
+                            <svg class="w-2.5 h-2.5 text-white"
+                              :class="disabledGroups.includes(item.id) && 'text-[#6F7785]'" viewBox="0 0 24 24"
+                              fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"
+                              stroke-linejoin="round">
+                              <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                          </template>
+                          <!-- 半选 -->
+                          <template x-if="!isGroupChecked(item.id) && isGroupIndeterminate(item.id)">
+                            <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                              stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                              <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                          </template>
+                        </div>
                       </div>
 
                       <!-- 文件夹图标 -->
-                      <svg class="w-4 h-4 shrink-0 mr-1.5 z-10" viewBox="0 0 16 16" fill="none">
-                        <path d="M1.5 3.5C1.5 2.67 2.17 2 3 2H6L7.5 3.5H13C13.83 3.5 14.5 4.17 14.5 5V12.5C14.5 13.33 13.83 14 13 14H3C2.17 14 1.5 13.33 1.5 12.5V3.5Z" fill="#FDAA1D" />
-                        <path d="M1.5 5.5H14.5V12.5C14.5 13.33 13.83 14 13 14H3C2.17 14 1.5 13.33 1.5 12.5V5.5Z" fill="#FFC24B" />
+                      <svg class="w-4 h-4 shrink-0 mr-1.5" viewBox="0 0 16 16" fill="none">
+                        <path
+                          d="M1.5 3.5C1.5 2.67 2.17 2 3 2H6L7.5 3.5H13C13.83 3.5 14.5 4.17 14.5 5V12.5C14.5 13.33 13.83 14 13 14H3C2.17 14 1.5 13.33 1.5 12.5V3.5Z"
+                          fill="#FDAA1D" />
+                        <path d="M1.5 5.5H14.5V12.5C14.5 13.33 13.83 14 13 14H3C2.17 14 1.5 13.33 1.5 12.5V5.5Z"
+                          fill="#FFC24B" />
                       </svg>
 
                       <!-- 分组名称 -->
-                      <span class="text-xs leading-[20px] truncate flex-1 min-w-0 z-10"
-                        :style="isGroupDisabled(item.id) ? 'color: #BEC3CC;' : 'color: #2F3540;'"
+                      <span class="text-[12px] leading-[20px] truncate flex-1 min-w-0"
+                        :style="disabledGroups.includes(item.id) ? 'color: #B0B5BD;' : 'color: #2F3540;'"
                         x-text="item.name"></span>
                     </div>
                   </template>
@@ -916,7 +941,7 @@ SASE 设备多选选择器主要用于管理大批量网络节点、网关和终
 
                     <template x-for="device in getPagedDevices()" :key="device.id">
                       <div class="flex items-center h-[40px] border-b border-[#E1E5EB] transition-colors"
-                        :style="isDeviceDisabledByGroup(device) ? 'opacity: 0.4; background-color: transparent;' : (isDeviceChecked(device.id) ? 'background-color: #E8F4FF;' : '')"
+                        :style="isDeviceDisabledByGroup(device) ? 'opacity: 0.5; background-color: transparent;' : (isDeviceChecked(device.id) ? 'background-color: #E8F4FF;' : '')"
                         :class="!isDeviceDisabledByGroup(device) && 'hover:bg-[#F7F9FC]'">
 
                         <!-- Checkbox -->
@@ -1261,23 +1286,7 @@ SASE 设备多选选择器主要用于管理大批量网络节点、网关和终
     </div>
 
   </div>
-```
 
-### 推荐配合使用的全局 CSS 样式
+</body>
 
-```css
-/* 自定义滚动条美化 */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(120, 130, 145, 0.3);
-  border-radius: 3px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-```
+</html>
