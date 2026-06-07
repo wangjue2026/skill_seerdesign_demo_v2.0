@@ -150,11 +150,12 @@
     *   单选选择器高度锁定在 32px (`h-8`)。
     *   下拉面板悬浮层阴影使用 `shadow-[0_4px_16px_rgba(30,35,43,0.14)]`。
     *   选中项采用通栏浅蓝底色背景，但**绝对禁止出现任何勾选图标 (Checkmark Icon)**。
+    *   下拉箭头与选择器容器右边距固定为 `8px` (原生 `select` 采用 `appearance: none` 配合 `background-position: right 8px center` 对齐，模拟 select 的内部选择容器可在 flex 布局下使用 `pl-3 pr-2` 对齐)。
 
 *   **标准骨架**：
     ```html
     <div class="sd-select sd-select-single w-[140px] relative" x-data="{ open: false, selected: '全部' }" @click.outside="open = false">
-      <div class="sd-select-selector h-8 flex items-center px-3 justify-between cursor-pointer" @click="open = !open">
+      <div class="sd-select-selector h-8 flex items-center pl-3 pr-2 justify-between cursor-pointer" @click="open = !open">
         <span class="sd-select-selection-item text-xs" x-text="selected">全部</span>
         <svg class="w-3.5 h-3.5 text-text-mute transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
       </div>
