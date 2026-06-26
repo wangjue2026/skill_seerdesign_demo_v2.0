@@ -244,6 +244,9 @@
     *   多个标签折行时，标签竖向间距为 2px，`td` 高度设为 `auto` 且上下内边距 `py-1` (4px)。**绝对禁止在 `<td>` 上直接写 `flex` 布局**，应在 `<td>` 内部包裹 `flex` 容器。
     *   分页器（Pagination）**默认吸底，固定在容器最下方**。当前页码背景必须为蓝色圆形（直径 24px），其他页码无底色。
     *   **🔒 冻结列（操作列 + 更多列）**：当列较多、表格需要横向滚动时，**操作列和更多列必须固定在右侧**。实现方式见「横向滚动 + 冻结列」骨架。**绝对禁止**用 `table-fixed`、`position: absolute`、JS 手动设置偏移等方式实现冻结。
+    *   **🔴【新坑】`td/th` 上的 `box-shadow` 在 `sd-table` 中完全失效**：`css-overrides.css` 对 `.sd-table` 设置了 `border-collapse: collapse`。CSS 规范规定，在此模式下 `td/th` 元素的 `box-shadow` 不会渲染，Tailwind 的 `shadow-*` 类同样无效。**不要企图在 `td` 上加 `shadow-*` 或 `box-shadow`**。唯一有效方式是在冻结列的专用 CSS 类（如 `sticky-op-col`）中通过 `box-shadow: ... !important` 覆盖 —— 因为 `!important` 能打破 `border-collapse` 对阴影的抑制。
+    *   **🔴【新坑】Tailwind `sticky` 类直接用在 `th` 上会被 css-overrides 静默覆盖**：`css-overrides.css` 对 `.sd-table th` 设置了 `position: relative !important`，导致 Tailwind 的 `.sticky`（`position: sticky`）被悄无声息地覆盖，冻结看似有代码实则完全未生效。**绝对禁止在 `th/td` 上直接写 Tailwind 的 `sticky`/`top-*`/`right-*` 等定位类**。必须使用形如 `table.sd-table th.sticky-op-col` 的高特异性选择器加 `!important` 才能正确覆盖，见「横向滚动 + 冻结列」骨架中的 CSS 规则。
+    *   **🔴【新坑】滚动条美化 CSS 必须绑定在 `.sd-table-responsive` 上**：自定义任意 class（如 `.table-scroll-container`）加上 `::-webkit-scrollbar` 规则不起作用或被浏览器优先级规则影响。**必须使用 `.sd-table-responsive::-webkit-scrollbar` 系列**，原因是 `css-overrides.css` 本身对滚动容器有默认样式，用统一的 `.sd-table-responsive` class 能正确叠加覆盖。
 
 *   **标准骨架**：
     ```html
